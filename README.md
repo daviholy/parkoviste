@@ -1,2 +1,2 @@
-# projekt-parkoviste
-projekt pro detekci vozidel na parkovišti
+# dev branch
+toto je větev určená pro přidávání nového kódu k testování.
