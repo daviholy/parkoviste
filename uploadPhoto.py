@@ -1,45 +1,72 @@
 import cv2
-import numpy as np
 import json
 import requests
+import argparse
 from datetime import datetime
+from sys import exit
+
+parser = argparse.ArgumentParser()
+parser.add_argument('client_credentials', type=str, help='json file with client credentials')
+parser.add_argument('--img_dir', type=str, default='./photos/', help='directory where camera images should be stored')
+parser.add_argument('--camera_source', default=0, help='example: rtsp://username:password@192.168.1.64/1')
+args = parser.parse_args()
+
+credentials = {}
+
+try:
+    with open(args.client_credentials, 'r') as cr:
+        credentials = json.load(cr)
+except FileNotFoundError:
+    exit("File" + args.client_credentials + "not found")
 
 
-headers = {
-    "Authorization": "Bearer ##secret key##"}
-img_dir = "./photos/"
-
-
-def save_img_to_drive(img_name):
-    global headers
-    global img_dir
+def save_img_to_drive(img_name, binary_img):
+    token = credentials['access_token']
     para = {
         "name": img_name,
-        "parents": ["1iPsJb27oM8SQFLPf_E2tMiDEiac-9Caz"]
-    }
+        "parents": ["1iPsJb27oM8SQFLPf_E2tMiDEiac-9Caz"]}
     files = {
         'data': ('metadata', json.dumps(para), 'application/json; charset=UTF-8'),
-        'file': open(img_dir+img_name, "rb")
-    }
+        'file': binary_img}
+
+    r = requests.post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+                      headers={"Authorization": "Bearer " + token},
+                      files=files)
+
+    if r.status_code == 401:
+        print("Token expired")
+        token = refresh_access_token()
+        credentials['access_token'] = token
+        with open(args.client_credentials, 'w') as fp:
+            json.dump(credentials, fp)
+        r = requests.post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+                          headers={"Authorization": "Bearer " + token}, files=files)
+
+
+def refresh_access_token():
     r = requests.post(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
-        headers=headers,
-        files=files
+        'https://www.googleapis.com/oauth2/v4/token',
+        headers={'content-type': 'application/x-www-form-urlencoded'},
+        data={
+            'grant_type': 'refresh_token',
+            'client_id': credentials['client_id'],
+            'client_secret': credentials['client_secret'],
+            'refresh_token': credentials['refresh_token'],
+        }
     )
-    print(r.text)
+    if r.status_code == 200:
+        return r.json()['access_token']
 
 
-cap = cv2.VideoCapture(0)  # fill rtsp
-# example 'rtsp://username:password@192.168.1.64/1'
+cap = cv2.VideoCapture(args.camera_source)
 
 ret, frame = cap.read()
 if not ret:
     print("No camera return")
 else:
     img_name = datetime.now().strftime("%Y_%b_%d_%H_%M") + ".png"
-    cv2.imwrite(img_dir+img_name, frame)
-    save_img_to_drive(img_name)
-
+    cv2.imwrite(args.img_dir + img_name, frame)  # Backup local save
+    save_img_to_drive(img_name, cv2.imencode('.png', frame)[1].tobytes())
 
 cap.release()
 cv2.destroyAllWindows()
