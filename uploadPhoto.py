@@ -17,33 +17,35 @@ try:
     with open(args.client_credentials, 'r') as cr:
         credentials = json.load(cr)
 except FileNotFoundError:
-    exit("File" + args.client_credentials + "not found")
+    exit("File " + args.client_credentials + " not found")
 
 
 def save_img_to_drive(img_name, binary_img):
     token = credentials['access_token']
     para = {
         "name": img_name,
-        "parents": ["1iPsJb27oM8SQFLPf_E2tMiDEiac-9Caz"]}
+        "parents": ["1iPsJb27oM8SQFLPf_E2tMiDEiac-9Caz"]}  # google drive directory id
     files = {
         'data': ('metadata', json.dumps(para), 'application/json; charset=UTF-8'),
         'file': binary_img}
 
     r = requests.post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
-                      headers={"Authorization": "Bearer " + token},
-                      files=files)
+                      headers={"Authorization": "Bearer " + token}, files=files)
 
-    if r.status_code == 401:
-        print("Token expired")
+    if r.status_code == 401:  # token expired - unauthorized
         token = refresh_access_token()
         credentials['access_token'] = token
         with open(args.client_credentials, 'w') as fp:
             json.dump(credentials, fp)
+        # Try to send picture once more with new token
         r = requests.post("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
                           headers={"Authorization": "Bearer " + token}, files=files)
 
+    return r.status_code == 200
+
 
 def refresh_access_token():
+    # Ask server for new access token and save it to the json file
     r = requests.post(
         'https://www.googleapis.com/oauth2/v4/token',
         headers={'content-type': 'application/x-www-form-urlencoded'},
@@ -65,8 +67,9 @@ if not ret:
     print("No camera return")
 else:
     img_name = datetime.now().strftime("%Y_%b_%d_%H_%M") + ".png"
-    cv2.imwrite(args.img_dir + img_name, frame)  # Backup local save
-    save_img_to_drive(img_name, cv2.imencode('.png', frame)[1].tobytes())
+    saved = save_img_to_drive(img_name, cv2.imencode('.png', frame)[1].tobytes())
+    if not saved:
+        cv2.imwrite(args.img_dir + img_name, frame)  # Backup local save if upload was unsuccessful
 
 cap.release()
 cv2.destroyAllWindows()
