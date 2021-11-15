@@ -6,7 +6,7 @@ drawing = False
 point1 = ()
 point2 = ()
 ar = []
-type_p = ""
+type_p = "standard"
 
 
 def mouse_drawing(event, x, y, flags, params):
@@ -31,13 +31,14 @@ def save_to_json(data):
     with open('coordinates.json', 'w') as file:
         json.dump(data, file)
 
-def read_json():
+
+def read_json(path):
     data = {}
-    with open('coordinates.json', 'r') as file:
+    with open(path, 'r') as file:
         data = json.load(file)
     return data
 
-
+# Legend for keyboard keys
 def legend(image):
     cv2.putText(
         image,  # numpy array on which text is written
@@ -46,7 +47,7 @@ def legend(image):
         cv2.FONT_HERSHEY_DUPLEX,  # font family
         0.3,  # font size
         (255, 255, 255, 255),  # font color
-        1) #font stroke
+        1)  # font stroke
     cv2.putText(
         image,  # numpy array on which text is written
         "Z - undo | ESC - save and exit",  # text
@@ -56,7 +57,8 @@ def legend(image):
         (255, 255, 255, 255),  # font color
         1)  # font stroke
 
-def rectangle_opencv(image, standard_p, non_standard_p, disabled_p, color):
+# Creates rectangles on image. Green for standard position, red for disabled and blue for non-standard
+def rectangle_opencv(image, color):
     global type_p
 
     while True:
@@ -66,29 +68,16 @@ def rectangle_opencv(image, standard_p, non_standard_p, disabled_p, color):
 
         key = cv2.waitKey(1)  # wait 1ms for key otherwise continue
         if key == 115:  # 115 key code for s
-            standard_p = True
-            non_standard_p = False
-            disabled_p = False
+            type_p = "standard"
             color = (0, 255, 0)
 
         if key == 110:  # 110 key code for n
-            standard_p = False
-            non_standard_p = True
-            disabled_p = False
+            type_p = "non-standard"
             color = (255, 0, 0)  # BGR
 
         if key == 100:  # 100 key code for d
-            standard_p = False
-            non_standard_p = False
-            disabled_p = True
-            color = (0, 0, 255)
-
-        if standard_p:
-            type_p = "standard"
-        elif non_standard_p:
-            type_p = "non-standard"
-        elif disabled_p:
             type_p = "disabled"
+            color = (0, 0, 255)
 
         if point1 and point2:
             cv2.rectangle(image_copy, point1, point2, color)
@@ -124,8 +113,9 @@ def rectangle_opencv(image, standard_p, non_standard_p, disabled_p, color):
 
     cv2.destroyAllWindows()
 
-def view(image):
-    data = read_json()
+# View rectangles from json file 
+def view(image, path):
+    data = read_json(path)
     type_ar = []
     coor_ar = []
 
@@ -160,17 +150,18 @@ def main():
     parser = argparse.ArgumentParser(description='Object position coordination from rectangles in image')
     parser.add_argument('imagePath', type=str, help='Path to image.')
     parser.add_argument('--view', type=bool, default=False, help='False - default value | True - rectangle viewer')
+    parser.add_argument('--out', type=str, default="coordinates.json", help='Path to json file')
     args = parser.parse_args()
 
     cv2.namedWindow("Window")
     cv2.setMouseCallback("Window", mouse_drawing)
     image = cv2.imread(args.imagePath)
 
-    if not args.view:
-        rectangle_opencv(image, standard_p=True, non_standard_p=False, disabled_p=False,
-                         color=(0, 255, 0))
+    if args.view:
+        view(image, args.out)
     else:
-        view(image)
+        rectangle_opencv(image, color=(0, 255, 0))
+
 
 if __name__ == "__main__":
     main()
