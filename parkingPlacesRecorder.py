@@ -1,4 +1,5 @@
 import cv2
+import os
 import json
 import argparse
 from sys import exit
@@ -11,6 +12,8 @@ parser.add_argument('-pp', '--parking_places', type=str, default='./parkingPlace
                     help='json file with parking places locations')
 parser.add_argument('-cs', '--camera_source', default=0,
                     help='example: rtsp://username:password@192.168.1.64/1')
+parser.add_argument('-img', '--src_img', type=str, default='./image4.png',
+                    help='path to image that is used instead of camera input')
 
 
 def load_json(file_path):
@@ -30,9 +33,9 @@ if __name__ == '__main__':
 
     # 1. Take a picture from camera
     cap = cv2.VideoCapture(args.camera_source)
-    ret, frame = cap.read() if args.camera_source != 0 else (True, cv2.imread("./image4.png"))
+    ret, frame = cap.read() if args.camera_source != 0 else (os.path.isfile(args.src_img), cv2.imread(args.src_img))
     if not ret:
-        exit("No camera return")
+        exit("Invalid camera/image source")
     cap.release()
 
     # 2. Load parking places locations
