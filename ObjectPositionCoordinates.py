@@ -31,12 +31,38 @@ def save_to_json(data):
     with open('coordinates.json', 'w') as file:
         json.dump(data, file)
 
+def read_json():
+    data = {}
+    with open('coordinates.json', 'r') as file:
+        data = json.load(file)
+    return data
+
+
+def legend(image):
+    cv2.putText(
+        image,  # numpy array on which text is written
+        "S - standard | D - disabled | N - non-standard",  # text
+        (10, 15),  # position at which writing has to start
+        cv2.FONT_HERSHEY_DUPLEX,  # font family
+        0.3,  # font size
+        (255, 255, 255, 255),  # font color
+        1) #font stroke
+    cv2.putText(
+        image,  # numpy array on which text is written
+        "Z - undo | ESC - save and exit",  # text
+        (10, 30),  # position at which writing has to start
+        cv2.FONT_HERSHEY_DUPLEX,  # font family
+        0.3,  # font size
+        (255, 255, 255, 255),  # font color
+        1)  # font stroke
 
 def rectangle_opencv(image, standard_p, non_standard_p, disabled_p, color):
     global type_p
 
     while True:
         image_copy = image.copy()
+
+        legend(image_copy)
 
         key = cv2.waitKey(1)  # wait 1ms for key otherwise continue
         if key == 115:  # 115 key code for s
@@ -98,18 +124,53 @@ def rectangle_opencv(image, standard_p, non_standard_p, disabled_p, color):
 
     cv2.destroyAllWindows()
 
+def view(image):
+    data = read_json()
+    type_ar = []
+    coor_ar = []
+
+    if data:
+        for i in range(len(data)):
+            type_ar.append(data['position-' + str(i)]["type"])
+            coor_ar.append(data['position-' + str(i)]["coordinates"])
+        for i in range(len(type_ar)):
+            if type_ar[i] == "standard":
+                cv2.rectangle(image, coor_ar[i][0], coor_ar[i][1], (0, 255, 0))
+            elif type_ar[i] == "non-standard":
+                cv2.rectangle(image, coor_ar[i][0], coor_ar[i][1], (255, 0, 0))
+            elif type_ar[i] == "disabled":
+                cv2.rectangle(image, coor_ar[i][0], coor_ar[i][1], (0, 0, 255))
+
+        cv2.putText(
+            image,  # numpy array on which text is written
+            "View",  # text
+            (10, 15),  # position at which writing has to start
+            cv2.FONT_HERSHEY_DUPLEX,  # font family
+            0.5,  # font size
+            (0, 150, 255, 255),  # font color
+            1)  # font stroke
+
+        cv2.imshow("Window", image)
+        cv2.waitKey(0)
+    else:
+        print("No data to display.")
+
 
 def main():
     parser = argparse.ArgumentParser(description='Object position coordination from rectangles in image')
     parser.add_argument('imagePath', type=str, help='Path to image.')
+    parser.add_argument('--view', type=bool, default=False, help='False - default value | True - rectangle viewer')
     args = parser.parse_args()
 
     cv2.namedWindow("Window")
     cv2.setMouseCallback("Window", mouse_drawing)
+    image = cv2.imread(args.imagePath)
 
-    rectangle_opencv(cv2.imread(args.imagePath), standard_p=True, non_standard_p=False, disabled_p=False,
-                     color=(0, 255, 0))
-
+    if not args.view:
+        rectangle_opencv(image, standard_p=True, non_standard_p=False, disabled_p=False,
+                         color=(0, 255, 0))
+    else:
+        view(image)
 
 if __name__ == "__main__":
     main()
