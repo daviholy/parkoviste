@@ -17,15 +17,12 @@ parser.add_argument('-img', '--src_img', type=str, default='./image4.png',
 
 
 def load_json(file_path):
-    places = {}
 
     try:
         with open(file_path, 'r') as file:
-            places = json.load(file)
+            return json.load(file)
     except FileNotFoundError:
         exit("File " + file_path + " not found")
-
-    return places
 
 
 if __name__ == '__main__':
