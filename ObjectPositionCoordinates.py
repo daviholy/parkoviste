@@ -37,6 +37,7 @@ def mouse_drawing(event, x, y, flags, params):
 def save_to_json(data, path):
     """
     :param data: Data to be saved to file
+    :param path: Path to json file
     :return:
     """
     with open(path, 'w') as file:
@@ -45,14 +46,13 @@ def save_to_json(data, path):
 
 def read_json(path):
     """
-
     :param path: Path to json file
     :return:
     """
-    data = {}
     with open(path, 'r') as file:
         data = json.load(file)
     return data
+
 
 def legend(image):
     """
@@ -84,11 +84,12 @@ def rectangle_opencv(image, path):
      Green for standard position, red for disabled and blue for non-standard.
      Show all rectangles that has been created already.
     :param image: OpenCV image
+    :param path: Path to json file
     :return:
     """
     global type_p
     color_arr = [(0, 255, 0), (255, 0, 0), (0, 0, 255)]
-    color = color_arr[0] # Default value
+    color = color_arr[0]  # Default value
     while True:
         image_copy = image.copy()
 
@@ -145,7 +146,7 @@ def rectangle_opencv(image, path):
 
 def check_position_of_coordinates(data):
     """
-    Change coordinates if rectangle was not drawn from left upper corner 
+    Change coordinates if rectangle was not drawn from left upper corner
     :param data: Rectangle type and coordinates
     :return:
     """
@@ -185,12 +186,12 @@ def view(image, path):
         for i in data_json:
             type_ar.append(data_json[i]["type"])
             coor_ar.append(data_json[i]["coordinates"])
-        for type, coor in zip(type_ar, coor_ar):
-            if type == "standard":
+        for typ, coor in zip(type_ar, coor_ar):
+            if typ == "standard":
                 cv2.rectangle(image, coor[0], coor[1], (0, 255, 0))
-            elif type == "non-standard":
+            elif typ == "non-standard":
                 cv2.rectangle(image, coor[0], coor[1], (255, 0, 0))
-            elif type == "disabled":
+            elif typ == "disabled":
                 cv2.rectangle(image, coor[0], coor[1], (0, 0, 255))
 
         cv2.putText(
