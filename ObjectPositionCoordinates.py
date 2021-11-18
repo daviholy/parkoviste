@@ -137,7 +137,7 @@ def rectangle_opencv(image, path):
                 counter += 1
                 data_temp = {}
 
-            data = check_position_of_coordinates(data)
+            check_position_of_coordinates(data)
             save_to_json(data, path)
             break
 
@@ -167,8 +167,6 @@ def check_position_of_coordinates(data):
         elif tup_1[1] >= tup_2[1]:
             coor[0] = (tup_1[0], tup_2[1])
             coor[1] = (tup_2[0], tup_1[1])
-
-    return data
 
 
 def view(image, path):
