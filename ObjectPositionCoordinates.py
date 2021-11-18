@@ -10,6 +10,13 @@ type_p = "standard"
 
 
 def mouse_drawing(event, x, y, flags, params):
+    """
+    :param event:
+    :param x: X coordinates of mouse
+    :param y: Y coordinates of mouse
+    :param flags:
+    :param params:
+    """
     global point1, point2, drawing, ar, type_p
 
     if event == cv2.EVENT_LBUTTONDOWN:
@@ -27,25 +34,38 @@ def mouse_drawing(event, x, y, flags, params):
             point2 = (x, y)
 
 
-def save_to_json(data):
-    with open('coordinates.json', 'w') as file:
+def save_to_json(data, path):
+    """
+    :param data: Data to be saved to file
+    :return:
+    """
+    with open(path, 'w') as file:
         json.dump(data, file)
 
 
 def read_json(path):
+    """
+
+    :param path: Path to json file
+    :return:
+    """
     data = {}
     with open(path, 'r') as file:
         data = json.load(file)
     return data
 
-# Legend for keyboard keys
 def legend(image):
+    """
+    Creates text legend in the picture for keyboard keys that change behaviour of application
+    :param image: OpenCV image
+    :return:
+    """
     cv2.putText(
         image,  # numpy array on which text is written
         "S - standard | D - disabled | N - non-standard",  # text
         (10, 15),  # position at which writing has to start
         cv2.FONT_HERSHEY_DUPLEX,  # font family
-        0.3,  # font size
+        0.5,  # font size
         (255, 255, 255, 255),  # font color
         1)  # font stroke
     cv2.putText(
@@ -53,14 +73,22 @@ def legend(image):
         "Z - undo | ESC - save and exit",  # text
         (10, 30),  # position at which writing has to start
         cv2.FONT_HERSHEY_DUPLEX,  # font family
-        0.3,  # font size
+        0.5,  # font size
         (255, 255, 255, 255),  # font color
         1)  # font stroke
 
-# Creates rectangles on image. Green for standard position, red for disabled and blue for non-standard
-def rectangle_opencv(image, color):
-    global type_p
 
+def rectangle_opencv(image, path):
+    """
+     Enable user to create rectangles on image.
+     Green for standard position, red for disabled and blue for non-standard.
+     Show all rectangles that has been created already.
+    :param image: OpenCV image
+    :return:
+    """
+    global type_p
+    color_arr = [(0, 255, 0), (255, 0, 0), (0, 0, 255)]
+    color = color_arr[0] # Default value
     while True:
         image_copy = image.copy()
 
@@ -69,15 +97,15 @@ def rectangle_opencv(image, color):
         key = cv2.waitKey(1)  # wait 1ms for key otherwise continue
         if key == 115:  # 115 key code for s
             type_p = "standard"
-            color = (0, 255, 0)
+            color = color_arr[0]
 
         if key == 110:  # 110 key code for n
             type_p = "non-standard"
-            color = (255, 0, 0)  # BGR
+            color = color_arr[1]  # BGR
 
         if key == 100:  # 100 key code for d
             type_p = "disabled"
-            color = (0, 0, 255)
+            color = color_arr[2]
 
         if point1 and point2:
             cv2.rectangle(image_copy, point1, point2, color)
@@ -85,11 +113,11 @@ def rectangle_opencv(image, color):
         if ar:
             for i in range(len(ar)):
                 if ar[i][2] == "standard":
-                    cv2.rectangle(image_copy, ar[i][0], ar[i][1], (0, 255, 0))
+                    cv2.rectangle(image_copy, ar[i][0], ar[i][1], color_arr[0])
                 elif ar[i][2] == "non-standard":
-                    cv2.rectangle(image_copy, ar[i][0], ar[i][1], (255, 0, 0))
+                    cv2.rectangle(image_copy, ar[i][0], ar[i][1], color_arr[1])
                 elif ar[i][2] == "disabled":
-                    cv2.rectangle(image_copy, ar[i][0], ar[i][1], (0, 0, 255))
+                    cv2.rectangle(image_copy, ar[i][0], ar[i][1], color_arr[2])
 
         cv2.imshow("Window", image_copy)
 
@@ -108,28 +136,62 @@ def rectangle_opencv(image, color):
                 counter += 1
                 data_temp = {}
 
-            save_to_json(data)
+            data = check_position_of_coordinates(data)
+            save_to_json(data, path)
             break
 
     cv2.destroyAllWindows()
 
-# View rectangles from json file 
+
+def check_position_of_coordinates(data):
+    """
+    Change coordinates if rectangle was not drawn from left upper corner 
+    :param data: Rectangle type and coordinates
+    :return:
+    """
+    coor_ar = []
+    for d in data:
+        coor_ar.append(data[d]["coordinates"])
+
+    for coor in coor_ar:
+        print(coor)
+        tup_1 = coor[0]
+        tup_2 = coor[1]
+        if tup_1[0] >= tup_2[0] and tup_1[1] >= tup_2[1]:
+            coor[0] = tup_2
+            coor[1] = tup_1
+        elif tup_1[0] >= tup_2[0]:
+            coor[0] = (tup_2[0], tup_1[1])
+            coor[1] = (tup_1[0], tup_2[1])
+        elif tup_1[1] >= tup_2[1]:
+            coor[0] = (tup_1[0], tup_2[1])
+            coor[1] = (tup_2[0], tup_1[1])
+
+    return data
+
+
 def view(image, path):
-    data = read_json(path)
+    """
+    Show rectangles and creates rectangles by coordinates from json file.
+    :param image: OpenCV image where rectangles will be created
+    :param path: Path to json file
+    :return:
+    """
+    data_json = read_json(path)
     type_ar = []
     coor_ar = []
 
-    if data:
-        for i in range(len(data)):
-            type_ar.append(data['position-' + str(i)]["type"])
-            coor_ar.append(data['position-' + str(i)]["coordinates"])
-        for i in range(len(type_ar)):
-            if type_ar[i] == "standard":
-                cv2.rectangle(image, coor_ar[i][0], coor_ar[i][1], (0, 255, 0))
-            elif type_ar[i] == "non-standard":
-                cv2.rectangle(image, coor_ar[i][0], coor_ar[i][1], (255, 0, 0))
-            elif type_ar[i] == "disabled":
-                cv2.rectangle(image, coor_ar[i][0], coor_ar[i][1], (0, 0, 255))
+    if data_json:
+        for i in data_json:
+            type_ar.append(data_json[i]["type"])
+            coor_ar.append(data_json[i]["coordinates"])
+        for type, coor in zip(type_ar, coor_ar):
+            if type == "standard":
+                cv2.rectangle(image, coor[0], coor[1], (0, 255, 0))
+            elif type == "non-standard":
+                cv2.rectangle(image, coor[0], coor[1], (255, 0, 0))
+            elif type == "disabled":
+                cv2.rectangle(image, coor[0], coor[1], (0, 0, 255))
 
         cv2.putText(
             image,  # numpy array on which text is written
@@ -149,8 +211,10 @@ def view(image, path):
 def main():
     parser = argparse.ArgumentParser(description='Object position coordination from rectangles in image')
     parser.add_argument('imagePath', type=str, help='Path to image.')
-    parser.add_argument('--view', type=bool, default=False, help='False - default value | True - rectangle viewer')
-    parser.add_argument('--out', type=str, default="coordinates.json", help='Path to json file')
+    parser.add_argument('-j', '--json', type=str, default="parkingPlace.json", help='Path to the json file')
+    parser.add_argument('--view', type=bool, default=False,
+                        help='Viewer mod for rectangles in picture imported from Json.'
+                             'False - default value | True - rectangle viewer')
     args = parser.parse_args()
 
     cv2.namedWindow("Window")
@@ -158,9 +222,9 @@ def main():
     image = cv2.imread(args.imagePath)
 
     if args.view:
-        view(image, args.out)
+        view(image, args.json)
     else:
-        rectangle_opencv(image, color=(0, 255, 0))
+        rectangle_opencv(image, args.json)
 
 
 if __name__ == "__main__":
