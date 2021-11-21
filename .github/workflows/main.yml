@@ -1,0 +1,16 @@
+name: Add Reviewers
+
+on:
+  pull_request:
+    branches: [ main-dev ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Add Reviewers
+      uses: madrapps/add-reviewers@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        reviewers: Cemonix,AnezkaKoutnikova,FandaCmuchar,daviholy
+        re-request-when-changes-requested: true
