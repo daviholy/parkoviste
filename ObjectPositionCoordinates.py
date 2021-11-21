@@ -2,6 +2,12 @@ import argparse
 import cv2
 import json
 
+"""
+Script that enable user to create rectangles on picture of type standard - green,
+non-standard - blue, and disabled - red. If user press escape, rectangle coordinates 
+are saved into json file.
+"""
+
 drawing = False
 point1 = ()
 point2 = ()
@@ -38,7 +44,6 @@ def save_to_json(data, path):
     """
     :param data: Data to be saved to file
     :param path: Path to json file
-    :return:
     """
     with open(path, 'w') as file:
         json.dump(data, file)
@@ -47,7 +52,6 @@ def save_to_json(data, path):
 def read_json(path):
     """
     :param path: Path to json file
-    :return:
     """
     with open(path, 'r') as file:
         data = json.load(file)
@@ -58,7 +62,6 @@ def legend(image):
     """
     Creates text legend in the picture for keyboard keys that change behaviour of application
     :param image: OpenCV image
-    :return:
     """
     cv2.putText(
         image,  # numpy array on which text is written
@@ -85,7 +88,6 @@ def rectangle_opencv(image, path):
      Show all rectangles that has been created already.
     :param image: OpenCV image
     :param path: Path to json file
-    :return:
     """
     global type_p
     color_arr = [(0, 255, 0), (255, 0, 0), (0, 0, 255)]
@@ -148,7 +150,6 @@ def check_position_of_coordinates(data):
     """
     Change coordinates if rectangle was not drawn from left upper corner
     :param data: Rectangle type and coordinates
-    :return:
     """
     coor_ar = []
     for d in data:
@@ -174,7 +175,6 @@ def view(image, path):
     Show rectangles and creates rectangles by coordinates from json file.
     :param image: OpenCV image where rectangles will be created
     :param path: Path to json file
-    :return:
     """
     data_json = read_json(path)
     type_ar = []
@@ -208,6 +208,9 @@ def view(image, path):
 
 
 def main():
+    """
+    Set up of parser and calls for script functions
+    """
     parser = argparse.ArgumentParser(description='Object position coordination from rectangles in image')
     parser.add_argument('imagePath', type=str, help='Path to image.')
     parser.add_argument('-j', '--json', type=str, default="parkingPlace.json", help='Path to the json file')
