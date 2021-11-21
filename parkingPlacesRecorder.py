@@ -5,6 +5,7 @@ import argparse
 from sys import exit
 from datetime import datetime
 
+
 """ Parking places photos collecting script
 
 This script connects to given camera source and take a picture. Picture is than
@@ -32,6 +33,7 @@ def load_json(file_path):
     :param file_path: string with path to file
     :return: dictionary structure with coordinates
     """
+
     try:
         with open(file_path, 'r') as file:
             return json.load(file)
@@ -41,6 +43,7 @@ def load_json(file_path):
 
 if __name__ == '__main__':
     args = parser.parse_args()
+
 
     # Check given image directory and add / to the end if missing
     try:
@@ -67,12 +70,10 @@ if __name__ == '__main__':
     for place, data in parking_places.items():
         x1, y1 = data['coordinates'][0]
         x2, y2 = data['coordinates'][1]
-
         if x1 > x2:
             x1, x2 = x2, x1
         if y1 > y2:
             y1, y2 = y2, y1
-
         i += 1
         img_name = args.prefix + "pl-" + str(i) + "-" + data['type'][0] + "_" + \
                    datetime.now().strftime("%y-%b-%d_%H-%M") + args.suffix + ".jpg"
