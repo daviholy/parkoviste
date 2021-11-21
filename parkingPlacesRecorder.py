@@ -13,9 +13,9 @@ cut up to pieces (parking places) which are saved separately in jpg format.
 """
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--img_dir', type=str, default='./photos/',
+parser.add_argument('--img_dir', type=str, default='./photos',
                     help='directory where camera images should be stored')
-parser.add_argument('-pp', '--parking_places', type=str, default='./coordinates.json',
+parser.add_argument('-pp', '--parking_places', type=str, default='parkingPlaces.json',
                     help='json file with parking places locations')
 parser.add_argument('-cs', '--camera_source', default=0,
                     help='camera source is used primarily ,example: rtsp://username:password@192.168.1.64/1')
@@ -44,20 +44,21 @@ def load_json(file_path):
 if __name__ == '__main__':
     args = parser.parse_args()
 
-
     # Check given image directory and add / to the end if missing
     try:
         if args.img_dir[-1] != "/":
             args.img_dir = args.img_dir + "/"
     except Exception as e:
-        exit("Invalid image dictionary argument (input:'" + args.img_dir + "') with exception: " + str(e))
+        exit("Invalid image dictionary argument (input:'" +
+             args.img_dir + "') with exception: " + str(e))
 
     if not os.path.isdir(args.img_dir):
         exit(f"{args.img_dir} is invalid or non existing directory")
 
     # Take a picture from camera or use default image
     cap = cv2.VideoCapture(args.camera_source)
-    ret, frame = cap.read() if args.camera_source != 0 else (os.path.isfile(args.src_img), cv2.imread(args.src_img))
+    ret, frame = cap.read() if args.camera_source != 0 else (
+        os.path.isfile(args.src_img), cv2.imread(args.src_img))
     if not ret:
         exit("Invalid camera/image source")
     cap.release()
@@ -76,5 +77,6 @@ if __name__ == '__main__':
             y1, y2 = y2, y1
         i += 1
         img_name = args.prefix + "pl-" + str(i) + "-" + data['type'][0] + "_" + \
-                   datetime.now().strftime("%y-%b-%d_%H-%M") + args.suffix + ".jpg"
-        cv2.imwrite(args.img_dir + img_name, frame[y1:y2, x1:x2], [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+            datetime.now().strftime("%y-%b-%d_%H-%M") + args.suffix + ".jpg"
+        cv2.imwrite(args.img_dir + img_name,
+                    frame[y1:y2, x1:x2], [int(cv2.IMWRITE_JPEG_QUALITY), 85])

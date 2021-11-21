@@ -8,6 +8,15 @@ non-standard - blue, and disabled - red. If user press escape, rectangle coordin
 are saved into json file.
 Rectangles can be loaded from json file to be showed on the picture.
 """
+parser = argparse.ArgumentParser(
+    description='Object position coordination from rectangles in image')
+parser.add_argument('imagePath', type=str, help='Path to image.')
+parser.add_argument('-j', '--json', type=str,
+                    default="parkingPlaces.json", help='Path to the json file')
+parser.add_argument('--view', type=bool, default=False,
+                    help='Viewer mod for rectangles in picture imported from Json.'
+                         ' False - default value | True - rectangle viewer')
+
 drawing = False
 point1 = ()
 point2 = ()
@@ -40,7 +49,6 @@ def mouse_drawing(event, x, y, flags, params):
             point2 = (x, y)
 
 
-
 def save_to_json(data, path):
     """
     :param data: Data to be saved to file
@@ -58,7 +66,7 @@ def read_json(path):
         data = json.load(file)
     return data
 
-  
+
 def legend(image):
     """
     Creates text legend in the picture for keyboard keys that change behaviour of application
@@ -193,7 +201,6 @@ def view(image, path):
             elif typ == "disabled":
                 cv2.rectangle(image, coor[0], coor[1], (0, 0, 255))
 
-
         cv2.putText(
             image,  # numpy array on which text is written
             "View",  # text
@@ -210,15 +217,6 @@ def view(image, path):
 
 
 def main():
-    """
-    Set up of parser and calls for script functions
-    """
-    parser = argparse.ArgumentParser(description='Object position coordination from rectangles in image')
-    parser.add_argument('imagePath', type=str, help='Path to image.')
-    parser.add_argument('-j', '--json', type=str, default="parkingPlace.json", help='Path to the json file')
-    parser.add_argument('--view', type=bool, default=False,
-                        help='Viewer mod for rectangles in picture imported from Json.'
-                             'False - default value | True - rectangle viewer')
     args = parser.parse_args()
 
     cv2.namedWindow("Window")
