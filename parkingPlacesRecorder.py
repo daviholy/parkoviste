@@ -42,6 +42,16 @@ def load_json(file_path):
 if __name__ == '__main__':
     args = parser.parse_args()
 
+    # Check given image directory and add / to the end if missing
+    try:
+        if args.img_dir[-1] != "/":
+            args.img_dir = args.img_dir + "/"
+    except Exception as e:
+        exit("Invalid image dictionary argument (input:'" + args.img_dir + "') with exception: " + str(e))
+
+    if not os.path.isdir(args.img_dir):
+        exit(f"{args.img_dir} is invalid or non existing directory")
+
     # Take a picture from camera or use default image
     cap = cv2.VideoCapture(args.camera_source)
     ret, frame = cap.read() if args.camera_source != 0 else (os.path.isfile(args.src_img), cv2.imread(args.src_img))
