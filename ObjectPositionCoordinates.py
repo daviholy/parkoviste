@@ -6,6 +6,7 @@ import json
 Script that enable user to create rectangles on picture of type standard - green,
 non-standard - blue, and disabled - red. If user press escape, rectangle coordinates 
 are saved into json file.
+Rectangles can be loaded from json file to be showed on the picture.
 """
 
 drawing = False
