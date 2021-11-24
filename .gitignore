@@ -127,3 +127,18 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# ignoring IDE settings
+.vscode
+venv
+.idea
+
+#generated data
+*.json
+
+#images
+*.png
+*.jpg
+
+#shell scripts
+*.sh

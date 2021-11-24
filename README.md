@@ -1,2 +1,3 @@
-# projekt-parkoviste
-projekt pro detekci vozidel na parkovišti
+# main branch
+toto je hlavní vétev s funkčním kódem.
+
