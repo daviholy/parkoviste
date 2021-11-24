@@ -139,3 +139,6 @@ venv
 #images
 *.png
 *.jpg
+
+#shell scripts
+*.sh
