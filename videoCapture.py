@@ -14,11 +14,11 @@ parser.add_argument('-cs', '--camera_source', default=0,
 parser.add_argument('-pre', '--prefix', type=str, default="",
                     help="photo name prefix, example: 'cam1_'...jpg")
 args = parser.parse_args()
-                    
+
 cap = cv2.VideoCapture(args.camera_source)
 ret, frame = cap.read()
 if not ret:
     print("No camera return")
 else:
-    img_name = datetime.now().strftime("%Y_%b_%d_%H_%M") + ".jpg"
+    img_name = args.prefix + datetime.now().strftime("%Y_%b_%d_%H_%M") + ".jpg"
     cv2.imwrite(args.img_dir + img_name, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])

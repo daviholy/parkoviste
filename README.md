@@ -1,2 +1,3 @@
-# dev branch
-toto je větev určená pro přidávání nového kódu k testování.
+# main branch
+toto je hlavní vétev s funkčním kódem.
+
