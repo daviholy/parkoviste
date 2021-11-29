@@ -1,0 +1,104 @@
+from pathlib import Path
+from shutil import copy
+import json
+import argparse
+import numpy as np
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-sd', '--source_dir', type=str, default='../dataset',
+                    help='directory where the source dataset is stored (exported from label studio)')
+parser.add_argument('-dd', '--destination_dir', type=str, default='../dataset/split',
+                    help='directory where the split datasets should be stored')
+parser.add_argument('-sr', '--train_split_ratio', type=float, default=0.7,
+                    help='float in range 0-1 that determines ratio of slit between train and test dataset')
+args = parser.parse_args()
+
+training_dir = {'labels': f'{args.destination_dir}/training/labels/',
+                'photos': f'{args.destination_dir}/training/photos/'}
+testing_dir = {'labels': f'{args.destination_dir}/testing/labels/',
+               'photos': f'{args.destination_dir}/testing/photos/'}
+
+dest_dirs = {'training': training_dir, 'testing': testing_dir}
+
+
+def clear_source_labels(labels):
+    """
+    Clears source json files with labels from skipped annotations.
+    :param labels: paths to json files with labels
+    :return: list of tuples - [['json_file_name', 'img_file_name'], ...]
+    :rtype: list
+    """
+    json_img = []
+    # remove json files with label and create dict - json_file_name: img_name
+    for l in labels:
+        jFile = None
+
+        with open(l, 'r') as j:
+            jfile = json.load(j)
+
+        if len(jfile["result"]) == 0:
+            # skipped annotation, continue to another json file
+            continue
+        json_file_name = str(l).split('\\')[-1]
+        img_name = f'{jfile["task"]["data"]["image"].split("/")[-1]}'
+        json_img.append([json_file_name, img_name])
+
+    return json_img
+
+
+def get_highest_label_id(labels_dir):
+    """
+    Gets highest json file id.
+    :param labels_dir: directory of paths to json label files
+    :return: highest json file id
+    :rtype: int
+    """
+    labels = Path(labels_dir).glob("*.json")
+    labels = sorted(labels, key=lambda l: int(str(l).split('\\')[-1].split('.')[0]))
+    if len(labels) == 0:
+        return 0
+    return int(str(labels[-1]).split('\\')[-1].split('.')[0])
+
+
+def split_source_data(shuffle=True, random_seed=42):
+    """
+    Randomly splits labels and corresponding images to two directories (testing, training).
+    Also checks if destination directories contains json files and split only new labels.
+    :param shuffle: decides if photos will be randomly shuffled
+    :param random_seed: serves as seed for shuffling
+    :rtype: None
+    """
+    labels = Path(f"{args.source_dir}/labels").glob("*.json")
+    labels = sorted(labels, key=lambda l: int(str(l).split('\\')[-1].split('.')[0]))
+
+    # Search for highest label id in existing datasets directories
+
+    cut_of_id = max(get_highest_label_id(training_dir['labels']),
+                    get_highest_label_id(testing_dir['labels']))
+
+    # Cut off existing labels (already divided in past function call)
+    labels = labels[cut_of_id:]
+
+    json_img = clear_source_labels(labels)
+
+    # Split data randomly
+    data_size = len(json_img)
+    indices = list(range(data_size))
+    split = int(np.floor(args.train_split_ratio * data_size))
+
+    if shuffle:
+        np.random.seed(random_seed)
+        np.random.shuffle(indices)
+
+    test_indices, train_indices = [indices[split:], 'testing'], [indices[:split], 'training']
+
+    for idxs, dataset_name in [test_indices, train_indices]:
+        for idx in idxs:
+            jfile_name, img_name = json_img[idx]
+            # Copy files
+            copy(f'./{args.source_dir}/labels/{jfile_name}', dest_dirs[dataset_name]['labels'])
+            copy(f'./{args.source_dir}/photos/{img_name}', dest_dirs[dataset_name]['photos'])
+
+
+if __name__ == '__main__':
+    split_source_data()
