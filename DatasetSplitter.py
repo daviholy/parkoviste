@@ -1,8 +1,8 @@
 from pathlib import Path
-from shutil import copy
 import json
 import argparse
 import numpy as np
+import os
 
 """ Data splitting script
 
@@ -18,10 +18,10 @@ parser.add_argument('-sr', '--train_split_ratio', type=float, default=0.7,
                     help='float in range 0-1 that determines ratio of slit between train and test dataset')
 args = parser.parse_args()
 
-training_dir = {'labels': f'{args.destination_dir}/training/labels/',
-                'photos': f'{args.destination_dir}/training/photos/'}
-testing_dir = {'labels': f'{args.destination_dir}/testing/labels/',
-               'photos': f'{args.destination_dir}/testing/photos/'}
+training_dir = {'labels': f'{args.destination_dir}/training/labels',
+                'photos': f'{args.destination_dir}/training/photos'}
+testing_dir = {'labels': f'{args.destination_dir}/testing/labels',
+               'photos': f'{args.destination_dir}/testing/photos'}
 
 dest_dirs = {'training': training_dir, 'testing': testing_dir}
 
@@ -41,10 +41,10 @@ def clear_source_labels(labels):
         with open(l, 'r') as j:
             jfile = json.load(j)
 
-        if len(jfile["result"]) == 0:
+        if len(jfile["result"]) == 0 or not jfile["task"]["is_labeled"]:
             # skipped annotation, continue to another json file
             continue
-        json_file_name = str(l).split('\\')[-1]
+        json_file_name = l.parts[-1]
         img_name = f'{jfile["task"]["data"]["image"].split("/")[-1]}'
         json_img.append([json_file_name, img_name])
 
@@ -59,10 +59,10 @@ def get_highest_label_id(labels_dir):
     :rtype: int
     """
     labels = Path(labels_dir).glob("*.json")
-    labels = sorted(labels, key=lambda l: int(str(l).split('\\')[-1].split('.')[0]))
+    labels = sorted(labels, key=lambda l: int(l.parts[-1].split('.')[0]))
     if len(labels) == 0:
         return 0
-    return int(str(labels[-1]).split('\\')[-1].split('.')[0])
+    return int(labels[-1].parts[-1].split('.')[0])
 
 
 def split_source_data(shuffle=True, random_seed=42):
@@ -74,7 +74,7 @@ def split_source_data(shuffle=True, random_seed=42):
     :rtype: None
     """
     labels = Path(f"{args.source_dir}/labels").glob("*.json")
-    labels = sorted(labels, key=lambda l: int(str(l).split('\\')[-1].split('.')[0]))
+    labels = sorted(labels, key=lambda l: int(l.parts[-1].split('.')[0]))
 
     # Search for highest label id in existing datasets directories
 
@@ -100,9 +100,9 @@ def split_source_data(shuffle=True, random_seed=42):
     for idxs, dataset_name in [test_indices, train_indices]:
         for idx in idxs:
             jfile_name, img_name = json_img[idx]
-            # Copy files
-            copy(f'{args.source_dir}/labels/{jfile_name}', dest_dirs[dataset_name]['labels'])
-            copy(f'{args.source_dir}/photos/{img_name}', dest_dirs[dataset_name]['photos'])
+            # Replace files
+            os.replace(f'{args.source_dir}/photos/{img_name}', f'{dest_dirs[dataset_name]["photos"]}/{img_name}')
+            os.replace(f'{args.source_dir}/labels/{jfile_name}', f'{dest_dirs[dataset_name]["labels"]}/{jfile_name}')
 
 
 if __name__ == '__main__':
