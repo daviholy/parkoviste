@@ -2,7 +2,7 @@ from pathlib import Path
 from torchvision.io import read_image
 from torchvision.io import ImageReadMode
 from torchvision import transforms
-from torch import nn
+from torch import nn, tensor, Tensor, device, cuda
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data.dataloader import DataLoader
 import json
@@ -11,15 +11,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--directory', type=str, default='dataset',
+parser.add_argument('-d', '--directory', type=str, default='./dataset/split/',
                     help='directory where the dataset is stored')
 args = parser.parse_args()
 
+training_dir = {'labels': f'{args.directory}/training/labels/',
+                'photos': f'{args.directory}/training/photos/'}
+testing_dir = {'labels': f'{args.directory}/testing/labels/',
+               'photos': f'{args.directory}/testing/photos/'}
+
+dest_dirs = {'training': training_dir, 'testing': testing_dir}
+
 
 class DatasetCreator():
-    def __init__(self, annotations_file=None, img_dir=None, transform=None, target_transform=None):
-        self.labels = sorted(Path(f"{args.directory}/labels").glob("*.json"))
-        self.img_dir = f"{args.directory}/photos"
+    def __init__(self, dataset_type, annotations_file=None, img_dir=None, transform=None, target_transform=None):
+        self.labels = sorted(Path(dest_dirs[dataset_type]['labels']).glob("*.json"))
+        self.dataset_type = dataset_type
         self.transform = transform
         self.target_transform = target_transform
 
@@ -28,15 +35,15 @@ class DatasetCreator():
 
     def __getitem__(self, idx):
         jfile = None
-        print(self.labels[idx])
         with open(self.labels[idx], 'r') as j:
             jfile = json.load(j)
         img = read_image(
-            f'{args.directory}/photos/{jfile["task"]["data"]["image"].split("/")[-1]}', ImageReadMode.RGB)
+            f'{dest_dirs[self.dataset_type]["photos"]}/{jfile["task"]["data"]["image"].split("/")[-1]}',
+            ImageReadMode.RGB)
         if len(jfile["result"]) != 0:
             label = jfile["result"][0]["value"]["choices"][0]
         else:
-            return [], []
+            return img, []
         if self.transform:
             img = self.transform(img)
         if self.target_transform:
@@ -68,62 +75,96 @@ class NeuralNetwork(nn.Module):
         return self.layer_output(x)
 
 
-def split_dataset(dataset, train_split_ratio, batch_size=1, shuffle=True, random_seed=42):
+def collate_fn_pad(batch):
+    """
+    Takes images as tensors and labels as input, finds highest and widest size of an image than pad smaller images.
+    :param batch: list of images and labels [img_as_tensor, 'label', ....]
+    :return: returns tuple where ([padded_img_as_tensors,..], ('label',..))
+    :rtype: (list, tuple)
+    """
+    imgs, labels = zip(*batch)
+    # get max width and height
+    h, w = zip(*[list(t[0].size()) for t in imgs])
+    max_h, max_w = max(h), max(w)
+
+    padded_imgs = []
+    # padding
+    for img in imgs:
+        pad_h = max_h - img[0].size(0)
+        pad_w = max_w - img[0].size(1)
+
+        pad_l = int(pad_w/2)  # left
+        pad_r = pad_w - pad_l  # right
+        pad_t = int(pad_h/2)  # top
+        pad_b = pad_h - pad_t  # bottom
+        pad = nn.ZeroPad2d((pad_l, pad_r, pad_t, pad_b))
+        padded_imgs.append(pad(img[0]))
+
+    return padded_imgs, labels
+
+
+def split_dataset(train_data, test_data, batch_size=1, shuffle=True, random_seed=42):
     """
     Splits dataset to training and testing set by given ratio.
+    :param test_data: dataset with testing data from DataCreator
+    :param train_data: dataset with training data from DataCreator
     :param batch_size: size of the batch
     :param random_seed: seed for random shuffling
     :param shuffle: bool - decides if dataset will be shuffled
-    :param dataset: pytorch dataset
-    :param train_split_ratio: float in range 0-1 that determines ratio of slit between train and test dataset
     :return:
     :rtype: training and testing dataset
     """
 
-    data_size = len(dataset)
-    indices = list(range(data_size))
-    split = int(np.floor(train_split_ratio * data_size))
+    train_data_size = len(train_data)
+    test_data_size = len(test_data)
+    train_indices, test_indices = list(range(train_data_size)), list(range(test_data_size))
     if shuffle:
         np.random.seed(random_seed)
-        np.random.shuffle(indices)
-    test_indices, train_indices = indices[split:], indices[:split]
+        np.random.shuffle(test_indices)
+        np.random.shuffle(train_indices)
+
     train_sampler = SubsetRandomSampler(train_indices)
     test_sampler = SubsetRandomSampler(test_indices)
 
-    train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sampler)
-    test_loader = DataLoader(dataset, batch_size=batch_size, sampler=test_sampler)
+    train_loader = DataLoader(train_data, batch_size=batch_size, sampler=train_sampler,
+                              collate_fn=collate_fn_pad, drop_last=True)
+    test_loader = DataLoader(test_data, batch_size=batch_size, sampler=test_sampler,
+                             collate_fn=collate_fn_pad, drop_last=True)
 
     return train_loader, test_loader
 
 
-def test_data_loaders():
+def test_data_loaders(train_data, test_data):
     """
     Test function for data_loaders.
     :return:
     """
-    # FIXME: pokud zadame batch_size > 1 tak loader kontroluje velikost obrazku v kazde batch a
-    #  hazi error pri rozdilne velikosti obrazku
-    train_loader, test_loader = split_dataset(data, train_split_ratio=.7)
+    train_loader, test_loader = split_dataset(train_data, test_data, batch_size=5)
     d_train = {'car': 0, 'empty': 0, 'skipped': 0}
     d_test = {'car': 0, 'empty': 0, 'skipped': 0}
     for batch_index, (imgs, labels) in enumerate(train_loader):
-        if len(labels) > 0:
-            d_train[labels[0]] = d_train[labels[0]] + 1
-        else:
-            d_train['skipped'] = d_train['skipped'] + 1
+        img = imgs[0]
+        for l in labels:
+            if len(l) > 0:
+                d_train[l] = d_train[l] + 1
+            else:
+                d_train['skipped'] = d_train['skipped'] + 1
     for batch_index, (imgs, labels) in enumerate(test_loader):
-        if len(labels) > 0:
-            d_test[labels[0]] = d_test[labels[0]] + 1
-        else:
-            d_test['skipped'] = d_test['skipped'] + 1
-    print(f"train_dataset stats: {d_train}, cars in dataset: {d_train['car']/(d_train['car']+d_train['empty'])}%")
-    print(f"test_dataset stats: {d_test}, cars in dataset: {d_test['car']/(d_test['car']+d_test['empty'])}%")
+        for l in labels:
+            if len(l) > 0:
+                d_test[l] = d_test[l] + 1
+            else:
+                d_test['skipped'] = d_test['skipped'] + 1
+    print(f"train_dataset stats: {d_train}, cars in dataset: {d_train['car'] / (d_train['car'] + d_train['empty'])}%")
+    print(f"test_dataset stats: {d_test}, cars in dataset: {d_test['car'] / (d_test['car'] + d_test['empty'])}%")
 
 
 if __name__ == "__main__":
-    data = DatasetCreator(transform=nn.Sequential(
+    train_data = DatasetCreator('training', transform=nn.Sequential(
         transforms.Grayscale(), transforms.RandomEqualize(p=1)))
-    img = data[105][0].squeeze()
-    test_data_loaders()
+    test_data = DatasetCreator('testing', transform=nn.Sequential(
+        transforms.Grayscale(), transforms.RandomEqualize(p=1)))
+    img = train_data[105][0].squeeze()
+    test_data_loaders(train_data=train_data, test_data=test_data)
     plt.imshow(img, cmap='gray')
     plt.show()
