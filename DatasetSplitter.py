@@ -4,6 +4,11 @@ import json
 import argparse
 import numpy as np
 
+""" Data splitting script
+
+Randomly splits labels and corresponding images to two directories - testing, training.
+"""
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-sd', '--source_dir', type=str, default='../dataset',
                     help='directory where the source dataset is stored (exported from label studio)')
@@ -96,8 +101,8 @@ def split_source_data(shuffle=True, random_seed=42):
         for idx in idxs:
             jfile_name, img_name = json_img[idx]
             # Copy files
-            copy(f'./{args.source_dir}/labels/{jfile_name}', dest_dirs[dataset_name]['labels'])
-            copy(f'./{args.source_dir}/photos/{img_name}', dest_dirs[dataset_name]['photos'])
+            copy(f'{args.source_dir}/labels/{jfile_name}', dest_dirs[dataset_name]['labels'])
+            copy(f'{args.source_dir}/photos/{img_name}', dest_dirs[dataset_name]['photos'])
 
 
 if __name__ == '__main__':
