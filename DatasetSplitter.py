@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 import argparse
 import numpy as np
+from shutil import copy
 import os
 
 """ Data splitting script
@@ -16,6 +17,8 @@ parser.add_argument('-dd', '--destination_dir', type=str, default='../dataset/sp
                     help='directory where the split datasets should be stored')
 parser.add_argument('-sr', '--train_split_ratio', type=float, default=0.7,
                     help='float in range 0-1 that determines ratio of slit between train and test dataset')
+parser.add_argument('-cm', '--copy_mode', type=bool, default=False,
+                    help='decides if data will be copied od replaced, copy is slow, replace is faster')
 args = parser.parse_args()
 
 training_dir = {'labels': f'{args.destination_dir}/training/labels',
@@ -100,9 +103,14 @@ def split_source_data(shuffle=True, random_seed=42):
     for idxs, dataset_name in [test_indices, train_indices]:
         for idx in idxs:
             jfile_name, img_name = json_img[idx]
-            # Replace files
-            os.replace(f'{args.source_dir}/photos/{img_name}', f'{dest_dirs[dataset_name]["photos"]}/{img_name}')
-            os.replace(f'{args.source_dir}/labels/{jfile_name}', f'{dest_dirs[dataset_name]["labels"]}/{jfile_name}')
+            if args.copy_mode:
+                # Copy files
+                copy(f'{args.source_dir}/photos/{img_name}', dest_dirs[dataset_name]["photos"])
+                copy(f'{args.source_dir}/labels/{jfile_name}', dest_dirs[dataset_name]["labels"])
+            else:
+                # Replace files
+                os.replace(f'{args.source_dir}/photos/{img_name}',f'{dest_dirs[dataset_name]["photos"]}/{img_name}')
+                os.replace(f'{args.source_dir}/labels/{jfile_name}',f'{dest_dirs[dataset_name]["labels"]}/{jfile_name}')
 
 
 if __name__ == '__main__':
