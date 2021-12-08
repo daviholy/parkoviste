@@ -1,4 +1,5 @@
 import os.path
+import torch
 from sys import exit
 from pathlib import Path
 from torchvision.io import read_image
@@ -6,6 +7,7 @@ from torchvision.io import ImageReadMode
 from torchvision import transforms
 from torch import nn
 from torch import tensor
+from torch import zeros
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import RandomSampler
 from torch.utils.data.dataloader import DataLoader
@@ -57,7 +59,7 @@ class DatasetCreator(Dataset):
             img = self.transform(img)
         if self.target_transform:
             label = self.target_transform(label)
-        return img, tensor(1) #TODO: implement transformation text to tensor (now its only returngin 1 always)
+        return img.float(), tensor(1) #TODO: implement transformation text to tensor (now its only returning 1 always)
 
 
 class NeuralNetwork(nn.Module):
@@ -77,6 +79,8 @@ class NeuralNetwork(nn.Module):
 
     def forward(self, x):
         x = self.layer_input(x)
+        x = self.conv(x)
+        x = self.conv2(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
@@ -96,9 +100,10 @@ def _collate_fn_pad(batch):
     h, w = zip(*[list(t[0].size()) for t in imgs])
     max_h, max_w = max(h), max(w)
 
-    padded_imgs = []
+    padded_imgs = zeros(len(batch),1,max_h,max_w)
     # padding
-    for img in imgs:
+    for x in range(len(batch)):
+        img = batch[x][0]
         pad_h = max_h - img[0].size(0)
         pad_w = max_w - img[0].size(1)
 
@@ -107,7 +112,7 @@ def _collate_fn_pad(batch):
         pad_t = int(pad_h / 2)  # top
         pad_b = pad_h - pad_t  # bottom
         pad = nn.ZeroPad2d((pad_l, pad_r, pad_t, pad_b))
-        padded_imgs.append(pad(img[0]))
+        padded_imgs[x] = pad(img)
 
     return padded_imgs, labels
 
@@ -164,7 +169,7 @@ if __name__ == "__main__":
 
     test_data_loaders(train_loader, test_loader)
 
-    training = NeuralNetwork()
+    training = NeuralNetwork().to("cpu")
 
     for (data, label) in train_loader:
-        training.forward(data)
+        training(data)
