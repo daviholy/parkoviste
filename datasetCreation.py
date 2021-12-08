@@ -5,6 +5,7 @@ from torchvision.io import read_image
 from torchvision.io import ImageReadMode
 from torchvision import transforms
 from torch import nn
+from torch import tensor
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import RandomSampler
 from torch.utils.data.dataloader import DataLoader
@@ -13,16 +14,16 @@ import argparse
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--directory', type=str, default='./dataset/split/',
+parser.add_argument('-d', '--directory', type=str, default='./dataset/split',
                     help='directory where the dataset is stored')
 parser.add_argument('--DEBUG', type=bool, default=False,
                     help='decides if script will run in debug mode (prints to stdout)')
 args = parser.parse_args()
 
-training_dir = {'labels': f'{args.directory}/training/labels/',
-                'photos': f'{args.directory}/training/photos/'}
-testing_dir = {'labels': f'{args.directory}/testing/labels/',
-               'photos': f'{args.directory}/testing/photos/'}
+training_dir = {'labels': f'{args.directory}/training/labels',
+                'photos': f'{args.directory}/training/photos'}
+testing_dir = {'labels': f'{args.directory}/testing/labels',
+               'photos': f'{args.directory}/testing/photos'}
 
 dest_dirs = {'training': training_dir, 'testing': testing_dir}
 
@@ -56,7 +57,7 @@ class DatasetCreator(Dataset):
             img = self.transform(img)
         if self.target_transform:
             label = self.target_transform(label)
-        return img, label
+        return img, tensor(1) #TODO: implement transformation text to tensor (now its only returngin 1 always)
 
 
 class NeuralNetwork(nn.Module):
@@ -162,3 +163,8 @@ if __name__ == "__main__":
                              collate_fn=_collate_fn_pad)
 
     test_data_loaders(train_loader, test_loader)
+
+    training = NeuralNetwork()
+
+    for (data, label) in train_loader:
+        training.forward(data)

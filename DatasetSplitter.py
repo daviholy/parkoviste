@@ -109,7 +109,7 @@ def split_source_data(shuffle=True, random_seed=42):
                 copy(f'{args.source_dir}/labels/{jfile_name}', dest_dirs[dataset_name]["labels"])
             else:
                 # Replace files
-                os.replace(f'{args.source_dir}/photos/{img_name}',f'{dest_dirs[dataset_name]["photos"]}/{img_name}')
+                    
                 os.replace(f'{args.source_dir}/labels/{jfile_name}',f'{dest_dirs[dataset_name]["labels"]}/{jfile_name}')
 
 
