@@ -66,21 +66,26 @@ class NeuralNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.layer_input = nn.Sequential(nn.AdaptiveMaxPool2d(120))
+        self.conv = nn.Conv2d(1, 32, 1)
+        self.conv2 =nn.Conv2d(32, 32, 3)
+        self.batchnorm = nn.BatchNorm2d(32)
+        self.relu = nn.ReLU()
+        self.maxpool = nn.MaxPool2d(3)
         self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(
-            32, 32, 3), nn.BatchNorm2d(1), nn.ReLU(), nn.MaxPool2d(3))
+            32, 32, 3), nn.BatchNorm2d(32), nn.ReLU(), nn.MaxPool2d(3))
         self.layer2 = nn.Sequential(nn.Conv2d(32, 64, 1), nn.Conv2d(
-            64, 64, 3), nn.BatchNorm2d(32), nn.ReLU(), nn.MaxPool2d(3))
+            64, 64, 3), nn.BatchNorm2d(64), nn.ReLU(), nn.MaxPool2d(3))
         self.layer3 = nn.Sequential(nn.Conv2d(64, 128, 1), nn.Conv2d(
             128, 128, 3), nn.BatchNorm2d(128), nn.ReLU(), nn.MaxPool2d(3))
-        self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.Conv2d(
-            256, 256, 3), nn.BatchNorm2d(256), nn.ReLU(), nn.Flatten())
+        self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.Flatten())
+        self.lin1 = nn.Identity()
+        self.lin2 = nn.LazyLinear(1)
+        self.sig = nn.Sigmoid()
         self.layer_output = nn.Sequential(
-            nn.Linear(1024, 512), nn.BatchNorm2d(256), nn.Sigmoid())
+            nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(), nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(),  nn.LazyLinear(1), nn.Sigmoid())
 
     def forward(self, x):
         x = self.layer_input(x)
-        x = self.conv(x)
-        x = self.conv2(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
@@ -171,5 +176,6 @@ if __name__ == "__main__":
 
     training = NeuralNetwork().to("cpu")
 
+    #1 epoch
     for (data, label) in train_loader:
-        training(data)
+        print(training(data))
