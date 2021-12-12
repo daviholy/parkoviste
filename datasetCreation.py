@@ -1,11 +1,13 @@
 import os.path
 import torch
+import torchvision
 from sys import exit
 from pathlib import Path
 from torchvision.io import read_image
 from torchvision.io import ImageReadMode
 from torchvision import transforms
 from torch import nn
+import torch.nn.functional as F
 from torch import tensor
 from torch import zeros
 from torch.utils.data import Dataset
@@ -59,18 +61,17 @@ class DatasetCreator(Dataset):
             img = self.transform(img)
         if self.target_transform:
             label = self.target_transform(label)
-        return img.float(), tensor(1) #TODO: implement transformation text to tensor (now its only returning 1 always)
+        if label == 'car':  # TODO: tahle transformace by se asi mela predelat (neni moc hezka :D ale zatim funguje)
+            label = 1.0
+        else:
+            label = 0.0
+        return img.float(), tensor(label)
 
 
 class NeuralNetwork(nn.Module):
     def __init__(self):
         super().__init__()
         self.layer_input = nn.Sequential(nn.AdaptiveMaxPool2d(120))
-        self.conv = nn.Conv2d(1, 32, 1)
-        self.conv2 =nn.Conv2d(32, 32, 3)
-        self.batchnorm = nn.BatchNorm2d(32)
-        self.relu = nn.ReLU()
-        self.maxpool = nn.MaxPool2d(3)
         self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(
             32, 32, 3), nn.BatchNorm2d(32), nn.ReLU(), nn.MaxPool2d(3))
         self.layer2 = nn.Sequential(nn.Conv2d(32, 64, 1), nn.Conv2d(
@@ -78,9 +79,6 @@ class NeuralNetwork(nn.Module):
         self.layer3 = nn.Sequential(nn.Conv2d(64, 128, 1), nn.Conv2d(
             128, 128, 3), nn.BatchNorm2d(128), nn.ReLU(), nn.MaxPool2d(3))
         self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.Flatten())
-        self.lin1 = nn.Identity()
-        self.lin2 = nn.LazyLinear(1)
-        self.sig = nn.Sigmoid()
         self.layer_output = nn.Sequential(
             nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(), nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(),  nn.LazyLinear(1), nn.Sigmoid())
 
@@ -91,6 +89,74 @@ class NeuralNetwork(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
         return self.layer_output(x)
+
+
+def train_model():
+
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+    n_total_steps = len(train_loader)
+
+    for epoch in range(num_epochs):
+        for i, (images, labels) in enumerate(train_loader):
+
+            images, labels = images.to(device), labels.to(device)
+
+            output = model(images)
+            loss = criterion(output, labels)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            if (i+1) % 2000 == 0:
+                print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}")
+
+    print("Finished Training")
+
+
+def evaluate_model():
+    with torch.no_grad():
+        n_correct = 0
+        n_samples = 0
+        n_class_correct = [0, 0]
+        n_class_samples = [0, 0]
+
+        for images, labels in test_loader:
+            images = images.to(device)
+            labels = labels.to(device)
+            outputs = model(images)
+
+            print(outputs)
+
+            predicted = torch.round(outputs)
+            # print(predicted)
+            # print(labels)
+
+            n_samples += labels.size(0)
+            n_correct += (predicted == labels).sum().item()
+            # print(n_correct)
+            # print("----------------")
+
+            for i in range(batch_size):
+                if i >= n_samples:
+                    break
+                label = labels[i]
+                pred = predicted[i]
+                if label == pred:
+                    n_class_correct[int(label.item())] += 1
+                n_class_samples[int(label.item())] += 1
+
+        acc = 100.0 * n_correct / n_samples
+        # print(n_samples)
+        print(f"Accuracy of the net: {acc}%")
+
+        for i in range(len(classes)):
+            if n_class_samples[i] == 0:
+                n_class_samples[i] = 1
+            acc = 100.0 * n_class_correct[i] / n_class_samples[i]
+            print(f"Accuracy of {classes[i]}: {acc}%")
 
 
 def _collate_fn_pad(batch):
@@ -119,7 +185,7 @@ def _collate_fn_pad(batch):
         pad = nn.ZeroPad2d((pad_l, pad_r, pad_t, pad_b))
         padded_imgs[x] = pad(img)
 
-    return padded_imgs, labels
+    return padded_imgs, torch.reshape(torch.stack(labels), (len(batch),1))
 
 
 def debug(func):
@@ -160,6 +226,9 @@ def test_data_loaders(train_loader, test_loader):
 
 
 if __name__ == "__main__":
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    num_epochs = 8
+    learning_rate = 0.001
     batch_size = 5
 
     train_data = DatasetCreator('training', transform=nn.Sequential(
@@ -172,10 +241,17 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size=batch_size, sampler=RandomSampler(data_source=test_data),
                              collate_fn=_collate_fn_pad)
 
-    test_data_loaders(train_loader, test_loader)
+    # test_data_loaders(train_loader, test_loader)
 
-    training = NeuralNetwork().to("cpu")
+    classes = ('empty', 'car')
 
-    #1 epoch
-    for (data, label) in train_loader:
-        print(training(data))
+    model = NeuralNetwork().to(device)
+
+    model.load_state_dict(torch.load("../model/model2.pth"))  # Toto je nacitani jiz existujiciho modelu
+    model.eval()
+
+    evaluate_model()
+    # train_model()
+
+    # torch.save(model.state_dict(), "../model/model2.pth")  # Ulozeni modelu....
+
