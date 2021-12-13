@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     classes = ('empty', 'car')
 
-    model = NeuralNetwork().to(device)
+    model = NeuralNetwork(classes, device).to(device)
 
     model.load_state_dict(torch.load("../model/model2.pth"))  # Toto je nacitani jiz existujiciho modelu
     model.eval()
