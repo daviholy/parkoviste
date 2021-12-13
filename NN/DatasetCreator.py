@@ -3,14 +3,16 @@ from pathlib import Path
 from torchvision.io import ImageReadMode
 from torchvision.io import read_image
 from torch import tensor
+from os import path
+import json
 
 
 class DatasetCreator(Dataset):
     def __init__(self, dest_photos="dataset/photos",dest_labels="dataset/labels", transform=None, target_transform=None):
 
-        if not os.path.isdir(Path(dest_photos)):
+        if not path.isdir(Path(dest_photos)):
             exit("Not a valid image directory")
-        if not os.path.isdir(Path(dest_labels)):
+        if not path.isdir(Path(dest_labels)):
             exit("Not a valid label directory")   
 
         self.labels = sorted(Path(dest_labels).glob("*.json"))
