@@ -1,6 +1,5 @@
 
 import torch
-from sys import exit
 from torchvision import transforms
 from torch import nn
 import torch.nn.functional as F
@@ -9,6 +8,8 @@ from torch.utils.data.sampler import RandomSampler
 from torch.utils.data.dataloader import DataLoader
 import argparse
 import matplotlib.pyplot as plt
+from NN import DatasetCreator
+from NN import NeuralNetwork
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory', type=str, default='./dataset/split',
@@ -23,94 +24,6 @@ testing_dir = {'labels': f'{args.directory}/testing/labels',
                'photos': f'{args.directory}/testing/photos'}
 
 dest_dirs = {'training': training_dir, 'testing': testing_dir}
-
-class NeuralNetwork(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.layer_input = nn.Sequential(nn.AdaptiveMaxPool2d(120))
-        self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(
-            32, 32, 3), nn.BatchNorm2d(32), nn.ReLU(), nn.MaxPool2d(3))
-        self.layer2 = nn.Sequential(nn.Conv2d(32, 64, 1), nn.Conv2d(
-            64, 64, 3), nn.BatchNorm2d(64), nn.ReLU(), nn.MaxPool2d(3))
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 128, 1), nn.Conv2d(
-            128, 128, 3), nn.BatchNorm2d(128), nn.ReLU(), nn.MaxPool2d(3))
-        self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.Flatten())
-        self.layer_output = nn.Sequential(
-            nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(), nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(),  nn.LazyLinear(1), nn.Sigmoid())
-
-    def forward(self, x):
-        x = self.layer_input(x)
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        return self.layer_output(x)
-
-
-def train_model():
-
-    criterion = nn.BCEWithLogitsLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-    n_total_steps = len(train_loader)
-
-    for epoch in range(num_epochs):
-        for i, (images, labels) in enumerate(train_loader):
-
-            images, labels = images.to(device), labels.to(device)
-
-            output = model(images)
-            loss = criterion(output, labels)
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            if (i+1) % 2000 == 0:
-                print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}")
-
-    print("Finished Training")
-
-
-def evaluate_model():
-    with torch.no_grad():
-        n_correct = 0
-        n_samples = 0
-        n_class_correct = [0, 0]
-        n_class_samples = [0, 0]
-
-        for images, labels in test_loader:
-            images = images.to(device)
-            labels = labels.to(device)
-            outputs = model(images)
-
-            print(outputs)
-
-            predicted = torch.round(outputs)
-            print(predicted)
-            print(labels)
-
-            n_samples += labels.size(0)
-            n_correct += (predicted == labels).sum().item()
-            # print(n_correct)
-            # print("----------------")
-
-            for i in range(len(labels)):
-                label = labels[i]
-                pred = predicted[i]
-                if label == pred:
-                    n_class_correct[int(label.item())] += 1
-                n_class_samples[int(label.item())] += 1
-
-        acc = 100.0 * n_correct / n_samples
-        # print(n_samples)
-        print(f"Accuracy of the net: {acc}%")
-
-        for i in range(len(classes)):
-            if n_class_samples[i] == 0:
-                n_class_samples[i] = 1
-            acc = 100.0 * n_class_correct[i] / n_class_samples[i]
-            print(f"Accuracy of {classes[i]}: {acc}%")
 
 
 def _collate_fn_pad(batch):
@@ -141,14 +54,12 @@ def _collate_fn_pad(batch):
 
     return padded_imgs, torch.reshape(torch.stack(labels), (len(batch),1))
 
-
 def debug(func):
     def inner(*arg):
         if args.DEBUG:
             func(*arg)
 
     return inner
-
 
 @debug
 def test_data_loaders(train_loader, test_loader):
@@ -178,24 +89,23 @@ def test_data_loaders(train_loader, test_loader):
     plt.imshow(img.squeeze(), cmap='gray')
     plt.show()
 
-
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     num_epochs = 8
     learning_rate = 0.001
     batch_size = 5
 
-    #train_data = DatasetCreator('training', transform=nn.Sequential(
-    #    transforms.Grayscale(), transforms.RandomEqualize(p=1)))
-    test_data = DatasetCreator('testing', transform=nn.Sequential(
+    train_data = DatasetCreator(training_dir['photos'],training_dir['labels'], transform=nn.Sequential(
+        transforms.Grayscale(), transforms.RandomEqualize(p=1)))
+    test_data = DatasetCreator(testing_dir['photos'],testing_dir['labels'], transform=nn.Sequential(
         transforms.Grayscale(), transforms.RandomEqualize(p=1)))
 
-    #train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
-    #                          collate_fn=_collate_fn_pad)
+    train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
+                              collate_fn=_collate_fn_pad)
     test_loader = DataLoader(test_data, batch_size=batch_size, sampler=RandomSampler(data_source=test_data),
                              collate_fn=_collate_fn_pad)
 
-    # test_data_loaders(train_loader, test_loader)
+    test_data_loaders(train_loader, test_loader)
 
     classes = ('empty', 'car')
 
@@ -204,7 +114,7 @@ if __name__ == "__main__":
     model.load_state_dict(torch.load("../model/model2.pth"))  # Toto je nacitani jiz existujiciho modelu
     model.eval()
 
-    evaluate_model()
+    model.evaluate_model(test_loader)
     # train_model()
 
     # torch.save(model.state_dict(), "../model/model2.pth")  # Ulozeni modelu....
