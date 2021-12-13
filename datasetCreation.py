@@ -1,19 +1,12 @@
-import os.path
+
 import torch
-import torchvision
 from sys import exit
-from pathlib import Path
-from torchvision.io import read_image
-from torchvision.io import ImageReadMode
 from torchvision import transforms
 from torch import nn
 import torch.nn.functional as F
-from torch import tensor
 from torch import zeros
-from torch.utils.data import Dataset
 from torch.utils.data.sampler import RandomSampler
 from torch.utils.data.dataloader import DataLoader
-import json
 import argparse
 import matplotlib.pyplot as plt
 
@@ -30,43 +23,6 @@ testing_dir = {'labels': f'{args.directory}/testing/labels',
                'photos': f'{args.directory}/testing/photos'}
 
 dest_dirs = {'training': training_dir, 'testing': testing_dir}
-
-
-class DatasetCreator(Dataset):
-    def __init__(self, dataset_type, annotations_file=None, transform=None, target_transform=None):
-
-        if not os.path.isdir(Path(dest_dirs[dataset_type]['labels'])):
-            exit("Not a valid directory")
-
-        self.labels = sorted(Path(dest_dirs[dataset_type]['labels']).glob("*.json"))
-        self.dataset_type = dataset_type
-        self.transform = transform
-        self.target_transform = target_transform
-
-    def __len__(self):
-        return len(self.labels)
-
-    def __getitem__(self, idx):
-        jfile = None
-        with open(self.labels[idx], 'r') as j:
-            jfile = json.load(j)
-        img = read_image(
-            f'{dest_dirs[self.dataset_type]["photos"]}/{jfile["task"]["data"]["image"].split("/")[-1]}',
-            ImageReadMode.RGB)
-        if len(jfile["result"]) != 0:
-            label = jfile["result"][0]["value"]["choices"][0]
-        else:
-            return img, []
-        if self.transform:
-            img = self.transform(img)
-        if self.target_transform:
-            label = self.target_transform(label)
-        if label == 'car':  # TODO: tahle transformace by se asi mela predelat (neni moc hezka :D ale zatim funguje)
-            label = 1.0
-        else:
-            label = 0.0
-        return img.float(), tensor(label)
-
 
 class NeuralNetwork(nn.Module):
     def __init__(self):
