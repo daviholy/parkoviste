@@ -131,17 +131,15 @@ def evaluate_model():
             print(outputs)
 
             predicted = torch.round(outputs)
-            # print(predicted)
-            # print(labels)
+            print(predicted)
+            print(labels)
 
             n_samples += labels.size(0)
             n_correct += (predicted == labels).sum().item()
             # print(n_correct)
             # print("----------------")
 
-            for i in range(batch_size):
-                if i >= n_samples:
-                    break
+            for i in range(len(labels)):
                 label = labels[i]
                 pred = predicted[i]
                 if label == pred:
@@ -231,13 +229,13 @@ if __name__ == "__main__":
     learning_rate = 0.001
     batch_size = 5
 
-    train_data = DatasetCreator('training', transform=nn.Sequential(
-        transforms.Grayscale(), transforms.RandomEqualize(p=1)))
+    #train_data = DatasetCreator('training', transform=nn.Sequential(
+    #    transforms.Grayscale(), transforms.RandomEqualize(p=1)))
     test_data = DatasetCreator('testing', transform=nn.Sequential(
         transforms.Grayscale(), transforms.RandomEqualize(p=1)))
 
-    train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
-                              collate_fn=_collate_fn_pad)
+    #train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
+    #                          collate_fn=_collate_fn_pad)
     test_loader = DataLoader(test_data, batch_size=batch_size, sampler=RandomSampler(data_source=test_data),
                              collate_fn=_collate_fn_pad)
 
