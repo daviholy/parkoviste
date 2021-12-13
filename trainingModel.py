@@ -2,7 +2,6 @@
 import torch
 from torchvision import transforms
 from torch import nn
-import torch.nn.functional as F
 from torch import zeros
 from torch.utils.data.sampler import RandomSampler
 from torch.utils.data.dataloader import DataLoader
@@ -25,6 +24,7 @@ testing_dir = {'labels': f'{args.directory}/testing/labels',
                'photos': f'{args.directory}/testing/photos'}
 
 dest_dirs = {'training': training_dir, 'testing': testing_dir}
+
 
 
 def _collate_fn_pad(batch):
@@ -53,7 +53,7 @@ def _collate_fn_pad(batch):
         pad = nn.ZeroPad2d((pad_l, pad_r, pad_t, pad_b))
         padded_imgs[x] = pad(img)
 
-    return padded_imgs, labels
+    return padded_imgs, torch.reshape(torch.stack(labels), (len(batch),1))
 
 def debug(func):
     def inner(*arg):
@@ -91,33 +91,30 @@ def test_data_loaders(train_loader, test_loader):
     plt.show()
 
 if __name__ == "__main__":
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    num_epochs = 8
+    learning_rate = 0.001
     batch_size = 5
 
-
-    train_data = DatasetCreator(training_dir['photos'],training_dir['labels'], transform=nn.Sequential(
+    #train_data = DatasetCreator('training', transform=nn.Sequential(
+    #    transforms.Grayscale(), transforms.RandomEqualize(p=1)))
+    test_data = DatasetCreator('testing', transform=nn.Sequential(
         transforms.Grayscale(), transforms.RandomEqualize(p=1)))
-    test_data = DatasetCreator(testing_dir['photos'],testing_dir['labels'], transform=nn.Sequential(
-        transforms.Grayscale(), transforms.RandomEqualize(p=1)))
 
-    train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
-                              collate_fn=_collate_fn_pad)
+    #train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
+    #                          collate_fn=_collate_fn_pad)
     test_loader = DataLoader(test_data, batch_size=batch_size, sampler=RandomSampler(data_source=test_data),
                              collate_fn=_collate_fn_pad)
 
-    test_data_loaders(train_loader, test_loader)
-
+    # test_data_loaders(train_loader, test_loader)
 
     classes = ('empty', 'car')
 
-    model = NeuralNetwork(classes, device).to(device)
+    model = NeuralNetwork().to(device)
 
     model.load_state_dict(torch.load("../model/model2.pth"))  # Toto je nacitani jiz existujiciho modelu
     model.eval()
 
-    model.evaluate_model(test_loader)
+    model.evaluate_model()
     # train_model()
-    training = NeuralNetwork().to("cpu")
 
-    #1 epoch
-    for (data, label) in train_loader:
-        print(training(data))
