@@ -1,15 +1,13 @@
-
 import torch
 from torchvision import transforms
 from torch import nn
 from torch import zeros
 from torch.utils.data.sampler import RandomSampler
 from torch.utils.data.dataloader import DataLoader
-from NN import DatasetCreator
 import argparse
 import matplotlib.pyplot as plt
-from NN import DatasetCreator
-from NN import NeuralNetwork
+from NN.DatasetCreator import DatasetCreator
+from NN.NeuralNetwork import NeuralNetwork
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory', type=str, default='./dataset/split',
@@ -24,7 +22,6 @@ testing_dir = {'labels': f'{args.directory}/testing/labels',
                'photos': f'{args.directory}/testing/photos'}
 
 dest_dirs = {'training': training_dir, 'testing': testing_dir}
-
 
 
 def _collate_fn_pad(batch):
@@ -55,12 +52,14 @@ def _collate_fn_pad(batch):
 
     return padded_imgs, torch.reshape(torch.stack(labels), (len(batch),1))
 
+
 def debug(func):
     def inner(*arg):
         if args.DEBUG:
             func(*arg)
 
     return inner
+
 
 @debug
 def test_data_loaders(train_loader, test_loader):
@@ -90,15 +89,16 @@ def test_data_loaders(train_loader, test_loader):
     plt.imshow(img.squeeze(), cmap='gray')
     plt.show()
 
+
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     num_epochs = 8
     learning_rate = 0.001
     batch_size = 5
 
-    #train_data = DatasetCreator('training', transform=nn.Sequential(
+    #train_data = DatasetCreator(training_dir['photos'], training_dir['labels'], transform=nn.Sequential(
     #    transforms.Grayscale(), transforms.RandomEqualize(p=1)))
-    test_data = DatasetCreator('testing', transform=nn.Sequential(
+    test_data = DatasetCreator(testing_dir['photos'], testing_dir['labels'], transform=nn.Sequential(
         transforms.Grayscale(), transforms.RandomEqualize(p=1)))
 
     #train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
@@ -110,11 +110,11 @@ if __name__ == "__main__":
 
     classes = ('empty', 'car')
 
-    model = NeuralNetwork().to(device)
+    model = NeuralNetwork(classes, device).to(device)
 
     model.load_state_dict(torch.load("../model/model2.pth"))  # Toto je nacitani jiz existujiciho modelu
     model.eval()
 
-    model.evaluate_model()
+    model.evaluate_model(test_loader)
     # train_model()
 
