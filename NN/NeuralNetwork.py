@@ -10,15 +10,16 @@ class NeuralNetwork(nn.Module):
         self.classes = classes
 
         self.layer_input = nn.Sequential(nn.AdaptiveMaxPool2d(120))
-        self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(
-            32, 32, 3), nn.BatchNorm2d(32), nn.ReLU(), nn.MaxPool2d(3))
-        self.layer2 = nn.Sequential(nn.Conv2d(32, 64, 1), nn.Conv2d(
-            64, 64, 3), nn.BatchNorm2d(64), nn.ReLU(), nn.MaxPool2d(3))
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 128, 1), nn.Conv2d(
-            128, 128, 3), nn.BatchNorm2d(128), nn.ReLU(), nn.MaxPool2d(3))
+        self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(32, 32, 3),
+                                    nn.BatchNorm2d(32), nn.ReLU(), nn.MaxPool2d(3))
+        self.layer2 = nn.Sequential(nn.Conv2d(32, 64, 1), nn.Conv2d(64, 64, 3),
+                                    nn.BatchNorm2d(64), nn.ReLU(), nn.MaxPool2d(3))
+        self.layer3 = nn.Sequential(nn.Conv2d(64, 128, 1), nn.Conv2d(128, 128, 3),
+                                    nn.BatchNorm2d(128), nn.ReLU(), nn.MaxPool2d(3))
         self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.Flatten())
-        self.layer_output = nn.Sequential(
-            nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(), nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(),  nn.LazyLinear(1), nn.Sigmoid())
+
+        self.layer_output = nn.Sequential(nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(), nn.Identity(),
+                                          nn.BatchNorm1d(2304), nn.ReLU(), nn.LazyLinear(1), nn.Sigmoid())
 
     def forward(self, x):
         x = self.layer_input(x)
@@ -47,7 +48,7 @@ class NeuralNetwork(nn.Module):
                 loss.backward()
                 optimizer.step()
 
-                if (i+1) % 2000 == 0:
+                if (i+1) % 20 == 0:
                     print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}")
 
         print("Finished Training")
@@ -64,11 +65,11 @@ class NeuralNetwork(nn.Module):
                 labels = labels.to(self.device)
                 outputs = self(images)
 
-                print(outputs)
+                # print(outputs)
 
                 predicted = torch.round(outputs)
-                print(predicted)
-                print(labels)
+                # print(predicted)
+                # print(labels)
 
                 n_samples += labels.size(0)
                 n_correct += (predicted == labels).sum().item()

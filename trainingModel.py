@@ -67,54 +67,61 @@ def test_data_loaders(train_loader, test_loader):
     Test function for data_loaders. Prints datasets statistics.
     :return:
     """
+    cls = ['empty', 'car']
     d_train = {'car': 0, 'empty': 0, 'skipped': 0}
     d_test = {'car': 0, 'empty': 0, 'skipped': 0}
     for batch_index, (imgs, labels) in enumerate(train_loader):
         for l in labels:
+            idx = int(l.item())
             if len(l) > 0:
-                d_train[l] = d_train[l] + 1
+                d_train[cls[idx]] = d_train[cls[idx]] + 1
             else:
                 d_train['skipped'] = d_train['skipped'] + 1
     for batch_index, (imgs, labels) in enumerate(test_loader):
         img = imgs[0]
         for l in labels:
+            idx = int(l.item())
             if len(l) > 0:
-                d_test[l] = d_test[l] + 1
+                d_test[cls[idx]] = d_test[cls[idx]] + 1
             else:
                 d_test['skipped'] = d_test['skipped'] + 1
     print(f"train_dataset stats: {d_train}, cars in dataset: "
           f"{round(d_train['car'] / (d_train['car'] + d_train['empty']) * 100, 2)}%")
     print(f"test_dataset stats: {d_test}, cars in dataset: "
           f"{round(d_test['car'] / (d_test['car'] + d_test['empty']) * 100, 2)}%")
+    print(img)
+    print(img.shape)
     plt.imshow(img.squeeze(), cmap='gray')
     plt.show()
 
 
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    num_epochs = 8
-    learning_rate = 0.001
-    batch_size = 5
+    print(device)
+    num_epochs = 25
+    learning_rate = 0.01
+    batch_size = 64
 
-    #train_data = DatasetCreator(training_dir['photos'], training_dir['labels'], transform=nn.Sequential(
-    #    transforms.Grayscale(), transforms.RandomEqualize(p=1)))
+    train_data = DatasetCreator(training_dir['photos'], training_dir['labels'], transform=nn.Sequential(
+        transforms.Grayscale(), transforms.RandomEqualize(p=1)))
     test_data = DatasetCreator(testing_dir['photos'], testing_dir['labels'], transform=nn.Sequential(
         transforms.Grayscale(), transforms.RandomEqualize(p=1)))
 
-    #train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
-    #                          collate_fn=_collate_fn_pad)
+    train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
+                              collate_fn=_collate_fn_pad)
     test_loader = DataLoader(test_data, batch_size=batch_size, sampler=RandomSampler(data_source=test_data),
                              collate_fn=_collate_fn_pad)
 
-    # test_data_loaders(train_loader, test_loader)
-
     classes = ('empty', 'car')
 
-    model = NeuralNetwork(classes, device).to(device)
+    # model = NeuralNetwork(classes, device).to(device)
 
-    model.load_state_dict(torch.load("../model/model2.pth"))  # Toto je nacitani jiz existujiciho modelu
-    model.eval()
+    # model.load_state_dict(torch.load("../model/model_b64_e25.pth"))  # Toto je nacitani jiz existujiciho modelu
+    # model.eval()
 
-    model.evaluate_model(test_loader)
-    # train_model()
+    test_data_loaders(train_loader, test_loader)
+    # model.train_model(train_loader, num_epochs, learning_rate)
+    # torch.save(model.state_dict(), "../model/model_b64_e25r0_01.pth")
+
+    # model.evaluate_model(test_loader)
 
