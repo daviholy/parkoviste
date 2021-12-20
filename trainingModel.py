@@ -94,7 +94,8 @@ if __name__ == "__main__":
     num_epochs = 8
     learning_rate = 0.001
     batch_size = 5
-    labels = {"car": [1.,0.], "empty": [0.,1.]}
+    labels = {"car": [1.,0.], "empty": [0.,1.]
+    }
     #train_data = DatasetCreator(training_dir['photos'], training_dir['labels'], transform=nn.Sequential(
     #    transforms.Grayscale(), transforms.RandomEqualize(p=1)))
     test_data = DatasetCreator(labels,testing_dir['photos'], testing_dir['labels'], transform=nn.Sequential(

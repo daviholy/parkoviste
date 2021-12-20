@@ -18,7 +18,7 @@ class NeuralNetwork(nn.Module):
             128, 128, 3), nn.BatchNorm2d(128), nn.ReLU(), nn.MaxPool2d(3))
         self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.Flatten())
         self.layer_output = nn.Sequential(
-            nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(), nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(),  nn.LazyLinear(2), nn.Sigmoid())
+            nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(), nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(),  nn.LazyLinear(2), nn.Softmax())
 
     def forward(self, x):
         x = self.layer_input(x)
@@ -58,8 +58,12 @@ class NeuralNetwork(nn.Module):
         with torch.no_grad():
             n_correct = 0
             n_samples = 0
-            n_class_correct = [0, 0]
-            n_class_samples = [0, 0]
+            n_class_correct = {}
+            n_class_samples = {}
+
+            for key in data_loader.dataset.classes.keys(): #initialize class value dict to 0
+                n_class_correct[key] = 0
+                n_class_samples[key] = 0
 
             for images, labels in data_loader:
                 images = images.to(self.device)
@@ -70,13 +74,11 @@ class NeuralNetwork(nn.Module):
                 n_samples += len(labels)
                 n_correct += sum([1 if _.max() <= recall else 0 for _ in labels - predicted if _.max() > 0]) # assuming the tensors with one 1
                 n_correct += sum([1 if _.max() >= -recall else 0 for _ in labels - predicted if _.max() <= 0]) # assuming the tensors with 0
-                # print(n_correct)
-                # print("----------------")
 
                 for i in data_loader.dataset.classes.keys():
                     index = data_loader.dataset.classes[i].index(1)
-                    n_class_correct[i] = sum([1 if _ <= recall and _ >= 0 else 0 for _ in labels[:,index] - predicted[:,index]])
-                    n_class_samples[i] = sum(labels[:,index])
+                    n_class_correct[i] += sum([1 if _ <= recall and _ >= 0 else 0 for _ in labels[:,index] - predicted[:,index]])
+                    n_class_samples[i] += sum(labels[:,index])
 
             acc = 100.0 * n_correct / n_samples
             # print(n_samples)
