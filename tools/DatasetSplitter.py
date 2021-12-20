@@ -32,6 +32,7 @@ dest_dirs = {'training': training_dir, 'testing': testing_dir}
 def clear_source_labels(labels):
     """
     Clears source json files with labels from skipped annotations.
+
     :param labels: paths to json files with labels
     :return: list of tuples - [['json_file_name', 'img_file_name'], ...]
     :rtype: list
@@ -44,7 +45,7 @@ def clear_source_labels(labels):
         with open(l, 'r') as j:
             jfile = json.load(j)
 
-        if len(jfile["result"]) == 0 or not jfile["task"]["is_labeled"]:
+        if len(jfile["result"]) == 0 or not jfile["task"]["is_labeled"] or jfile["was_cancelled"]:
             # skipped annotation, continue to another json file
             continue
         json_file_name = l.parts[-1]
@@ -57,6 +58,7 @@ def clear_source_labels(labels):
 def get_highest_label_id(labels_dir):
     """
     Gets highest json file id.
+
     :param labels_dir: directory of paths to json label files
     :return: highest json file id
     :rtype: int
@@ -72,6 +74,7 @@ def split_source_data(shuffle=True, random_seed=42):
     """
     Randomly splits labels and corresponding images to two directories (testing, training).
     Also checks if destination directories contains json files and split only new labels.
+
     :param shuffle: decides if photos will be randomly shuffled
     :param random_seed: serves as seed for shuffling
     :rtype: None
@@ -109,9 +112,28 @@ def split_source_data(shuffle=True, random_seed=42):
                 copy(f'{args.source_dir}/labels/{jfile_name}', dest_dirs[dataset_name]["labels"])
             else:
                 # Replace files
-                    
                 os.replace(f'{args.source_dir}/labels/{jfile_name}',f'{dest_dirs[dataset_name]["labels"]}/{jfile_name}')
+                os.replace(f'{args.source_dir}/photos/{img_name}',f'{dest_dirs[dataset_name]["photos"]}/{img_name}')
+
+
+def check_for_duplicate_annotations():
+    """
+    Debug function that checks for multiple annotations for one photo.
+
+    :return:
+    """
+    data = clear_source_labels(Path(f"{args.source_dir}/labels").glob("*.json"))
+    counter = 0
+    for j, i in data:
+        for jj, ii in data:
+            if j != jj and i == ii:
+                counter += 1
+                print(f'json files\n{j}\n{jj}\nand images\n{i}\n{ii}')
+                print('--------------------------------------------------------')
+
+    print(counter)
 
 
 if __name__ == '__main__':
     split_source_data()
+    # check_for_duplicate_annotations()
