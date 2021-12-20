@@ -16,6 +16,7 @@ Script that visualize CNN convolutional layers with given image. Then visualizat
 def set_model(classes, device, created_model_path):
     """
     Load CNN model and evaluate it.
+
     :param classes: Classes
     :param device: CPU or GPU
     :param created_model_path: Path to trained CNN model
@@ -30,6 +31,7 @@ def set_model(classes, device, created_model_path):
 def image_transform(img_path):
     """
     Load an image and transform it.
+
     :param img_path: Path to image
     :return: Transformed image
     """
@@ -45,6 +47,7 @@ def image_transform(img_path):
 def get_conv2_layers(model):
     """
     Get all convolution layers from CNN model and count a number of layers.
+
     :param model: CNN model
     :return: Number of convolutional layers and array with that layers
     """
@@ -67,6 +70,7 @@ def eval_conv2_layers(conv_layers, image):
     """
     Use each CNN convolutional layers on image. Use SUM on each feature map of images and extract gray scale to convert
     images to lower dimension.
+
     :param conv_layers: Array of convolutional layers
     :param image: Transformed image
     :return: Array of visualized images
@@ -89,6 +93,7 @@ def eval_conv2_layers(conv_layers, image):
 def debug_print(num_of_conv2_layers, outputs, processed):
     """
     Print every important information about script for debug.
+
     :param num_of_conv2_layers: Number of layers
     :param outputs: Every layer used on a image
     :param processed: Visualized images
@@ -106,6 +111,7 @@ def debug_print(num_of_conv2_layers, outputs, processed):
 def save_figure(processed, num_of_conv2_layers, save_path):
     """
     Save figure of visualized images.
+    
     :param processed: Visualized images
     :param num_of_conv2_layers: Number of layers
     :param save_path: Path where figure will be saved
