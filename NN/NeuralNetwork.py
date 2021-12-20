@@ -72,8 +72,7 @@ class NeuralNetwork(nn.Module):
                 predicted = torch.round(outputs)
 
                 n_samples += len(labels)
-                n_correct += sum([1 if _.max() <= recall else 0 for _ in labels - predicted if _.max() > 0]) # assuming the tensors with one 1
-                n_correct += sum([1 if _.max() >= -recall else 0 for _ in labels - predicted if _.max() <= 0]) # assuming the tensors with 0
+                n_correct += sum([1 if _.max() <= recall else 0 for _ in labels ]) # assuming the tensors with one 1
 
                 for i in data_loader.dataset.classes.keys():
                     index = data_loader.dataset.classes[i].index(1)
@@ -81,7 +80,6 @@ class NeuralNetwork(nn.Module):
                     n_class_samples[i] += sum(labels[:,index])
 
             acc = 100.0 * n_correct / n_samples
-            # print(n_samples)
             print(f"Accuracy of the net: {acc}%")
 
             for i in data_loader.dataset.classes.keys():
