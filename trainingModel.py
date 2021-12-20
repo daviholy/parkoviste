@@ -10,7 +10,7 @@ from NN.DatasetCreator import DatasetCreator
 from NN.NeuralNetwork import NeuralNetwork
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--directory', type=str, default='./dataset/split',
+parser.add_argument('-d', '--directory', type=str, default='./dataset',
                     help='directory where the dataset is stored')
 parser.add_argument('--DEBUG', type=bool, default=False,
                     help='decides if script will run in debug mode (prints to stdout)')
@@ -49,8 +49,7 @@ def _collate_fn_pad(batch):
         pad_b = pad_h - pad_t  # bottom
         pad = nn.ZeroPad2d((pad_l, pad_r, pad_t, pad_b))
         padded_imgs[x] = pad(img)
-
-    return padded_imgs, torch.reshape(torch.stack(labels), (len(batch),1))
+    return padded_imgs, torch.stack(labels)
 
 
 def debug(func):
@@ -95,10 +94,10 @@ if __name__ == "__main__":
     num_epochs = 8
     learning_rate = 0.001
     batch_size = 5
-
+    labels = {"car": [1.,0.], "empty": [0.,1.]}
     #train_data = DatasetCreator(training_dir['photos'], training_dir['labels'], transform=nn.Sequential(
     #    transforms.Grayscale(), transforms.RandomEqualize(p=1)))
-    test_data = DatasetCreator(testing_dir['photos'], testing_dir['labels'], transform=nn.Sequential(
+    test_data = DatasetCreator(labels,testing_dir['photos'], testing_dir['labels'], transform=nn.Sequential(
         transforms.Grayscale(), transforms.RandomEqualize(p=1)))
 
     #train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
@@ -108,11 +107,10 @@ if __name__ == "__main__":
 
     # test_data_loaders(train_loader, test_loader)
 
-    classes = ('empty', 'car')
 
-    model = NeuralNetwork(classes, device).to(device)
+    model = NeuralNetwork(device)
 
-    model.load_state_dict(torch.load("../model/model2.pth"))  # Toto je nacitani jiz existujiciho modelu
+   # model.load_state_dict(torch.load("../model/model2.pth"))  # Toto je nacitani jiz existujiciho modelu
     model.eval()
 
     model.evaluate_model(test_loader)
