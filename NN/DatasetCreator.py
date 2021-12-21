@@ -9,7 +9,7 @@ import json
 
 
 class DatasetCreator(Dataset):
-    def __init__(self, label_dict : dict, dest_photos="dataset/photos",dest_labels="dataset/labels", transform=None, target_transform=None):
+    def __init__(self, label_dict: dict, dest_photos="dataset/photos",dest_labels="dataset/labels", transform=None, target_transform=None):
         print(os.getcwd())
         if not path.isdir(Path(dest_photos)):
             exit("Not a valid image directory")
