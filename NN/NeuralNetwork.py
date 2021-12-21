@@ -4,6 +4,7 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 
 
+
 class NeuralNetwork(nn.Module):
     def __init__(self, device="cpu"):
         super().__init__()
@@ -19,6 +20,7 @@ class NeuralNetwork(nn.Module):
         self.layer_output = nn.Sequential(
             nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(), nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(),  nn.LazyLinear(2), nn.Softmax(dim=1))
 
+        
     def forward(self, x):
         x = self.layer_input(x)
         x = self.layer1(x)
@@ -27,11 +29,10 @@ class NeuralNetwork(nn.Module):
         x = self.layer4(x)
         return self.layer_output(x)
 
+      
     def train_model(self, train_data_loader, test_data_loader, num_epochs, learning_rate):
-
         criterion = nn.NLLLoss()
         optimizer = Adam(self.parameters(), lr=learning_rate)
-
         n_total_steps = len(train_data_loader)
 
         for epoch in range(num_epochs):
@@ -91,3 +92,66 @@ class NeuralNetwork(nn.Module):
             print(f'total number of samples: {n_class_samples}')
             print(f'total number of correct guesses: {n_class_correct}')
 
+            
+    def train_model(self, data_loader, num_epochs, learning_rate):
+        criterion = nn.BCEWithLogitsLoss()
+        optimizer = Adam(self.parameters(), lr=learning_rate)
+
+        n_total_steps = len(data_loader)
+
+        for epoch in range(num_epochs):
+            for i, (images, labels) in enumerate(data_loader):
+
+                images, labels = images.to(self.device), labels.to(self.device)
+
+                output = self(images)
+                loss = criterion(output, labels)
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                if (i+1) % 20 == 0:
+                    print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}")
+        print("Finished Training")
+
+        
+    def evaluate_model(self, data_loader):
+        with torch.no_grad():
+            n_correct = 0
+            n_samples = 0
+            n_class_correct = [0, 0]
+            n_class_samples = [0, 0]
+
+            for images, labels in data_loader:
+                images = images.to(self.device)
+                labels = labels.to(self.device)
+                outputs = self(images)
+
+                # print(outputs)
+
+                predicted = torch.round(outputs)
+                # print(predicted)
+                # print(labels)
+
+                n_samples += labels.size(0)
+                n_correct += (predicted == labels).sum().item()
+                # print(n_correct)
+                # print("----------------")
+
+                for i in range(len(labels)):
+                    label = labels[i]
+                    pred = predicted[i]
+                    if label == pred:
+                        n_class_correct[int(label.item())] += 1
+                    n_class_samples[int(label.item())] += 1
+
+            acc = 100.0 * n_correct / n_samples
+            # print(n_samples)
+            print(f"Accuracy of the net: {acc}%")
+
+            for i in range(len(self.classes)):
+                if n_class_samples[i] == 0:
+                    n_class_samples[i] = 1
+                acc = 100.0 * n_class_correct[i] / n_class_samples[i]
+                print(f"Accuracy of {self.classes[i]}: {acc}%")

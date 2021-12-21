@@ -62,6 +62,7 @@ def _collate_fn_pad(batch):
     return padded_imgs, torch.stack(labels)
 
 
+
 def debug(func):
     def inner(*arg):
         if args.DEBUG:
@@ -126,12 +127,14 @@ if __name__ == "__main__":
 
     test_data_loaders(train_loader, test_loader)
 
+
     model = NeuralNetwork(device).to(device)
 
     # Check input arguments
     if len(args.existing_model_path) > 0:
         if not os.path.isfile(args.existing_model_path):
             exit("invalid path to model you wish to load")
+            
         model.load_state_dict(torch.load(args.existing_model_path))
 
     if len(args.save_model_path) > 0:
@@ -145,6 +148,7 @@ if __name__ == "__main__":
     else:
         model.eval()
         model.evaluate_model(test_loader, 0.2)
+
 
 
 
