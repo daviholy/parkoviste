@@ -1,8 +1,10 @@
 import torch
 import argparse
 import sys, os
-from torch import nn
+from torchvision.io import read_image
+from torchvision.io import ImageReadMode
 from torchvision import transforms
+from torch import zeros
 sys.path.append('../NN')
 from NeuralNetwork import NeuralNetwork
 from DatasetCreator import DatasetCreator
@@ -22,13 +24,14 @@ class ImageLabel(QLabel):
                 border: 4px dashed #aaa
             }
         ''')
+        self.setScaledContents(True)
 
     def setPixmap(self, image):
         super().setPixmap(image)
 
 
 class AppDemo(QWidget):
-    def __init__(self):
+    def __init__(self, model):
         super().__init__()
         self.resize(400, 400)
         self.setAcceptDrops(True)
@@ -39,6 +42,8 @@ class AppDemo(QWidget):
         mainLayout.addWidget(self.photoViewer)
 
         self.setLayout(mainLayout)
+
+        self.model = model
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasImage:
@@ -58,6 +63,13 @@ class AppDemo(QWidget):
             file_path = event.mimeData().urls()[0].toLocalFile()
             self.set_image(file_path)
 
+            img = read_image(file_path, ImageReadMode.RGB)
+            transform = torch.nn.Sequential(transforms.Grayscale(), transforms.RandomEqualize(p=1))
+            img = transform(img).float()
+            ten = zeros(1, img.shape[0], img.shape[1], img.shape[2])
+            ten[0] = img
+            print(self.model(ten))
+
             event.accept()
         else:
             event.ignore()
@@ -67,19 +79,20 @@ class AppDemo(QWidget):
 
 
 if __name__ == "__main__":
-    model_path = "../../model/model2.pth"
+    model_path = "../../model/model_b64_e24_v0-3.pth"
     # 1. Vytvorit a nacist model NN
 
     classes = ('empty', 'car')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(device)
 
-    model = NeuralNetwork(classes, device)
+    model = NeuralNetwork(device)
 
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
     app = QApplication(sys.argv)
-    demo = AppDemo()
+    demo = AppDemo(model)
     demo.show()
     sys.exit(app.exec_())
 
