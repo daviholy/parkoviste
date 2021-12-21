@@ -4,17 +4,18 @@ from torchvision.io import ImageReadMode
 from torchvision.io import read_image
 from torch import tensor
 from os import path
+import os
 import json
 
 
 class DatasetCreator(Dataset):
-    def __init__(self, dest_photos="dataset/photos",dest_labels="dataset/labels", transform=None, target_transform=None):
-
+    def __init__(self, label_dict: dict, dest_photos="dataset/photos",dest_labels="dataset/labels", transform=None, target_transform=None):
+        print(os.getcwd())
         if not path.isdir(Path(dest_photos)):
             exit("Not a valid image directory")
         if not path.isdir(Path(dest_labels)):
-            exit("Not a valid label directory")   
-
+            exit("Not a valid label directory")
+        self.classes = label_dict
         self.labels = sorted(Path(dest_labels).glob("*.json"))
         self.transform = transform
         self.target_transform = target_transform
@@ -38,8 +39,4 @@ class DatasetCreator(Dataset):
             img = self.transform(img)
         if self.target_transform:
             label = self.target_transform(label)
-        if label == 'car':  # TODO: tahle transformace by se asi mela predelat (neni moc hezka :D ale zatim funguje)
-            label = 1.0
-        else:
-            label = 0.0
-        return img.float(), tensor(label)
+        return img.float(), tensor(self.classes[label])

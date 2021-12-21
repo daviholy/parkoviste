@@ -14,8 +14,8 @@ from NN.NeuralNetwork import NeuralNetwork
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory', type=str, default='./dataset/split',
                     help='directory where the dataset is stored')
-parser.add_argument('-eval', '--eval_mode', type=bool, default=True,
-                    help='decides if model will be trained or evaluated')
+parser.add_argument('-train', '--train_mode', type=bool, default=False,
+                    help='decides if model will be trained or only evaluated')
 parser.add_argument('-em', '--existing_model_path', type=str, default='',
                     help='path to existing model that you wish to load, if empty model will not be loaded')
 parser.add_argument('-sm', '--save_model_path', type=str, default='',
@@ -35,6 +35,7 @@ dest_dirs = {'training': training_dir, 'testing': testing_dir}
 def _collate_fn_pad(batch):
     """
     Takes images as tensors and labels as input, finds highest and widest size of an image than pad smaller images.
+
     :param batch: list of images and labels [img_as_tensor, 'label', ....]
     :return: returns tuple where ([padded_img_as_tensors,..], ('label',..))
     :rtype: (list, tuple)
@@ -58,7 +59,8 @@ def _collate_fn_pad(batch):
         pad = nn.ZeroPad2d((pad_l, pad_r, pad_t, pad_b))
         padded_imgs[x] = pad(img)
 
-    return padded_imgs, torch.reshape(torch.stack(labels), (len(batch),1))
+    return padded_imgs, torch.stack(labels)
+
 
 
 def debug(func):
@@ -106,13 +108,14 @@ def test_data_loaders(train_loader, test_loader):
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
-    num_epochs = 25
+    num_epochs = 24
     learning_rate = 0.01
     batch_size = 64
+    labels = {"car": 0, "empty": 1}
 
-    train_data = DatasetCreator(training_dir['photos'], training_dir['labels'], transform=nn.Sequential(
+    train_data = DatasetCreator(labels, training_dir['photos'], training_dir['labels'], transform=nn.Sequential(
         transforms.Grayscale(), transforms.RandomEqualize(p=1)))
-    test_data = DatasetCreator(testing_dir['photos'], testing_dir['labels'], transform=nn.Sequential(
+    test_data = DatasetCreator({"car": [1.0, 0.0], "empty": [0.0, 1.0]}, testing_dir['photos'], testing_dir['labels'], transform=nn.Sequential(
         transforms.Grayscale(), transforms.RandomEqualize(p=1)))
 
     train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
@@ -124,24 +127,28 @@ if __name__ == "__main__":
 
     test_data_loaders(train_loader, test_loader)
 
-    model = NeuralNetwork(classes, device).to(device)
+
+    model = NeuralNetwork(device).to(device)
 
     # Check input arguments
     if len(args.existing_model_path) > 0:
-        if os.path.isfile(args.existing_model_path):
+        if not os.path.isfile(args.existing_model_path):
             exit("invalid path to model you wish to load")
+            
         model.load_state_dict(torch.load(args.existing_model_path))
 
     if len(args.save_model_path) > 0:
-        if not os.path.isdir(args.save_model_path):
+        if not os.path.isdir('/'.join(os.path.split(args.save_model_path)[:-1])):
             exit("invalid path to save model")
 
-    if args.eval_mode:
-        model.eval()
-        model.evaluate_model(test_loader)
-    else:
-        model.train_model(train_loader, num_epochs, learning_rate)
+    if args.train_mode:
+        model.train_model(train_loader, test_loader, num_epochs, learning_rate)
         if len(args.save_model_path) > 0:
             torch.save(model.state_dict(), args.save_model_path)
+    else:
+        model.eval()
+        model.evaluate_model(test_loader, 0.2)
+
+
 
 
