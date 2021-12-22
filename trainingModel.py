@@ -6,10 +6,12 @@ from torch.utils.data.sampler import RandomSampler
 from torch.utils.data.dataloader import DataLoader
 import argparse
 import os
+import sys
 from sys import exit
 import matplotlib.pyplot as plt
-from NN.DatasetCreator import DatasetCreator
-from NN.NeuralNetwork import NeuralNetwork
+from NN.ModelStatistics import *
+from NN.DatasetCreator import *
+from NN.NeuralNetwork import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory', type=str, default='./dataset/split',
@@ -45,7 +47,7 @@ def _collate_fn_pad(batch):
     h, w = zip(*[list(t[0].size()) for t in imgs])
     max_h, max_w = max(h), max(w)
 
-    padded_imgs = zeros(len(batch),1,max_h,max_w)
+    padded_imgs = zeros(len(batch), 1, max_h, max_w)
     # padding
     for x in range(len(batch)):
         img = batch[x][0]
@@ -114,8 +116,9 @@ if __name__ == "__main__":
 
     train_data = DatasetCreator(labels, training_dir['photos'], training_dir['labels'], transform=nn.Sequential(
         transforms.Grayscale(), transforms.RandomEqualize(p=1)))
-    test_data = DatasetCreator({"car": [1.0, 0.0], "empty": [0.0, 1.0]}, testing_dir['photos'], testing_dir['labels'], transform=nn.Sequential(
-        transforms.Grayscale(), transforms.RandomEqualize(p=1)))
+    test_data = DatasetCreator(labels, testing_dir['photos'], testing_dir['labels'],
+                               transform=nn.Sequential(
+                                   transforms.Grayscale(), transforms.RandomEqualize(p=1)))
 
     train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
                               collate_fn=_collate_fn_pad)
@@ -144,7 +147,4 @@ if __name__ == "__main__":
             torch.save(model.state_dict(), args.save_model_path)
     else:
         model.eval()
-        model.evaluate_model(test_loader, 0.2)
-
-
-
+        model.evaluate_model(test_loader, 0.5)

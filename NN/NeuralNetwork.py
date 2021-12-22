@@ -1,7 +1,9 @@
+import numpy as np
 from torch import nn
 from torch.optim import Adam
 import torch
 from torch.utils.data.dataloader import DataLoader
+from .ModelStatistics import *
 
 
 class NeuralNetwork(nn.Module):
@@ -48,7 +50,12 @@ class NeuralNetwork(nn.Module):
 
                 if (i+1) % 20 == 0:
                     print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}")
-            self.evaluate_model(test_data_loader, 0.4)
+
+            self.evaluate_model(test_data_loader, 0.1)
+            print("Model evaluation on testing data")
+
+            self.evaluate_model(train_data_loader, 0.1)
+            print("Model evaluation on testing data")
 
         print("Finished Training")
 
@@ -61,32 +68,42 @@ class NeuralNetwork(nn.Module):
             n_class_correct = {}
             n_class_samples = {}
 
-            for key in data_loader.dataset.classes.keys():  # initialize class value dict to 0
-                n_class_correct[key] = 0
+            class_names = list(data_loader.dataset.classes.keys())
+            class_matrix = np.identity(len(class_names))
+
+            for key in class_names:  # initialize class value dict to 0
+                n_class_correct[key] = 0  # n_class_correct['car'], n_class_correct['empty']
                 n_class_samples[key] = 0
+
+            # creates lists that contains empty list for each class
+            all_predictions = []
+            all_labels = []
 
             for images, labels in data_loader:
                 images = images.to(self.device)
                 labels = labels.to(self.device)
                 predicted = self(images)
 
-                # print(predicted)
+                for i in range(len(labels)):
+                    # labels[i] = 0 - car = data_loader.dataset.classes.keys()[0], labels[i] = 1 - empty
+                    curr_class = class_names[labels[i]]
+                    n_class_samples[curr_class] += 1
+                    n_class_correct[curr_class] += 1 if predicted[i][labels[i]] >= 1.0-recall else 0
 
                 n_samples += len(labels)
-                n_correct += sum([1 if _.max() <= recall else 0 for _ in labels - predicted])  # assuming the tensors with one 1
+                n_correct = sum(n_class_correct.values())
 
-                for i in data_loader.dataset.classes.keys():
-                    index = data_loader.dataset.classes[i].index(1)
-                    idxs = [j for j in range(len(labels)) if labels[j][index] == 1.0]
-                    n_class_correct[i] += sum([1 if recall >= (labels[idx][index] - predicted[idx][index]) else 0 for idx in idxs])
-                    n_class_samples[i] += int(sum(labels[:, index]))
+                all_predictions.extend(predicted.cpu().detach().numpy())
+                all_labels.extend([class_matrix[i] for i in labels])
+
+            count_roc_auc(len(class_names), np.array(all_predictions), np.array(all_labels))
 
             acc = 100.0 * n_correct / n_samples
             print(f"Accuracy of the net: {acc}%")
 
-            for i in data_loader.dataset.classes.keys():
+            for i in class_names:
                 acc = 100.0 * n_class_correct[i] / n_class_samples[i]
-                print(f"Accuracy of {data_loader.dataset.classes[i]}: {acc}%")
+                print(f"Accuracy of {i}: {acc}%")
 
             print(f'total number of samples: {n_class_samples}')
             print(f'total number of correct guesses: {n_class_correct}')
