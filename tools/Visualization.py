@@ -1,11 +1,13 @@
+if __name__ == "__main__":
+    from common import init
+    init()
+
 import torch
-import sys
 from torch import nn
 from torchvision.io import read_image
 from torchvision.io import ImageReadMode
 from torchvision import transforms
-sys.path.append("../NN")
-from NeuralNetwork import NeuralNetwork
+from NN.NeuralNetwork import NeuralNetwork
 import matplotlib.pyplot as plt
 import argparse
 
