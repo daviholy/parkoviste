@@ -12,19 +12,7 @@ This script connects to given camera source and take a picture. Picture is than
 cut up to pieces (parking places) which are saved separately in jpg format.
 """
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--img_dir', type=str, default='./photos',
-                    help='directory where camera images should be stored')
-parser.add_argument('-pp', '--parking_places', type=str, default='parkingPlaces.json',
-                    help='json file with parking places locations')
-parser.add_argument('-cs', '--camera_source', default=0,
-                    help='camera source is used primarily ,example: rtsp://username:password@192.168.1.64/1')
-parser.add_argument('-img', '--src_img', type=str, default='./image.png',
-                    help='path to image that is used in case of no camera source')
-parser.add_argument('-suf', '--suffix', type=str, default="",
-                    help="photo name suffix, example: ...'_cam1'.jpg")
-parser.add_argument('-pre', '--prefix', type=str, default="",
-                    help="photo name prefix, example: 'cam1_'...jpg")
+
 
 
 def load_json(file_path):
@@ -42,6 +30,20 @@ def load_json(file_path):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--img_dir', type=str, default='./photos',
+                        help='directory where camera images should be stored')
+    parser.add_argument('-pp', '--parking_places', type=str, default='parkingPlaces.json',
+                        help='json file with parking places locations')
+    parser.add_argument('-cs', '--camera_source', default=0,
+                        help='camera source is used primarily ,example: rtsp://username:password@192.168.1.64/1')
+    parser.add_argument('-img', '--src_img', type=str, default='./image.png',
+                        help='path to image that is used in case of no camera source')
+    parser.add_argument('-suf', '--suffix', type=str, default="",
+                        help="photo name suffix, example: ...'_cam1'.jpg")
+    parser.add_argument('-pre', '--prefix', type=str, default="",
+                    help="photo name prefix, example: 'cam1_'...jpg")
+
     args = parser.parse_args()
 
     # Check given image directory and add / to the end if missing
