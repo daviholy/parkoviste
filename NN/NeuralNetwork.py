@@ -51,11 +51,12 @@ class NeuralNetwork(nn.Module):
                 if (i+1) % 20 == 0:
                     print(f"Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}")
 
-            self.evaluate_model(test_data_loader, 0.1)
-            print("Model evaluation on testing data")
+            if epoch % 4 == 0 or epoch == num_epochs - 1:
+                self.evaluate_model(test_data_loader, 0.1)
+                print("Model evaluation on testing data")
 
-            self.evaluate_model(train_data_loader, 0.1)
-            print("Model evaluation on testing data")
+                self.evaluate_model(train_data_loader, 0.1)
+                print("Model evaluation on testing data")
 
         print("Finished Training")
 

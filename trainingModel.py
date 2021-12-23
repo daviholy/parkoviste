@@ -1,6 +1,7 @@
 import torch
 from torchvision import transforms
 from torch import nn
+import torch.nn.functional as F
 from torch import zeros
 from torch.utils.data.sampler import RandomSampler
 from torch.utils.data.dataloader import DataLoader
@@ -8,8 +9,6 @@ import argparse
 import os
 import sys
 from sys import exit
-import matplotlib.pyplot as plt
-from NN.ModelStatistics import *
 from NN.DatasetCreator import *
 from NN.NeuralNetwork import *
 
@@ -60,6 +59,7 @@ def _collate_fn_pad(batch):
         pad_b = pad_h - pad_t  # bottom
         pad = nn.ZeroPad2d((pad_l, pad_r, pad_t, pad_b))
         padded_imgs[x] = pad(img)
+        # padded_imgs[x] = F.pad(img, (pad_l, pad_r, pad_t, pad_b), value=255)  # test of white padding (seems same)
 
     return padded_imgs, torch.stack(labels)
 
@@ -109,16 +109,19 @@ def test_data_loaders(train_loader, test_loader):
 if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
-    num_epochs = 24
-    learning_rate = 0.01
-    batch_size = 64
+    num_epochs = 16
+    learning_rate = 0.0025
+    batch_size = 96
     labels = {"car": 0, "empty": 1}
 
-    train_data = DatasetCreator(labels, training_dir['photos'], training_dir['labels'], transform=nn.Sequential(
-        transforms.Grayscale(), transforms.RandomEqualize(p=1)))
-    test_data = DatasetCreator(labels, testing_dir['photos'], testing_dir['labels'],
-                               transform=nn.Sequential(
-                                   transforms.Grayscale(), transforms.RandomEqualize(p=1)))
+    trans = nn.Sequential(
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.Grayscale(),
+        transforms.RandomEqualize(p=1))
+
+    train_data = DatasetCreator(labels, training_dir['photos'], training_dir['labels'], transform=trans)
+    test_data = DatasetCreator(labels, testing_dir['photos'], testing_dir['labels'], transform=trans)
 
     train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
                               collate_fn=_collate_fn_pad)
