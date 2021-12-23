@@ -79,8 +79,6 @@ class AppDemo(QWidget):
 
 
 if __name__ == "__main__":
-    model_path = "../../model/model_b96_e24_lr0-0025_v0-5.pth"
-
     classes = ('empty', 'car')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
@@ -94,4 +92,3 @@ if __name__ == "__main__":
     demo = AppDemo(model)
     demo.show()
     sys.exit(app.exec_())
-

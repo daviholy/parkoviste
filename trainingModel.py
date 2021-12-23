@@ -63,7 +63,6 @@ def _collate_fn_pad(batch):
 
     return padded_imgs, torch.stack(labels)
 
-
 def debug(func):
     def inner(*arg):
         if args.DEBUG:

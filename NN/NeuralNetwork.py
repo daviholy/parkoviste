@@ -6,6 +6,7 @@ from torch.utils.data.dataloader import DataLoader
 from .ModelStatistics import *
 
 
+
 class NeuralNetwork(nn.Module):
     def __init__(self, device="cpu"):
         super().__init__()
@@ -20,7 +21,7 @@ class NeuralNetwork(nn.Module):
         self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.Flatten())
         self.layer_output = nn.Sequential(
             nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(), nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(),  nn.LazyLinear(2), nn.Softmax(dim=1))
-
+       
     def forward(self, x):
         x = self.layer_input(x)
         x = self.layer1(x)
@@ -108,4 +109,3 @@ class NeuralNetwork(nn.Module):
 
             print(f'total number of samples: {n_class_samples}')
             print(f'total number of correct guesses: {n_class_correct}')
-
