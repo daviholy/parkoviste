@@ -1,3 +1,4 @@
+from common import Common
 import torch
 from torchvision import transforms
 from torch import nn
@@ -11,26 +12,6 @@ import sys
 from sys import exit
 from NN.DatasetCreator import *
 from NN.NeuralNetwork import *
-
-parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--directory', type=str, default='./dataset/split',
-                    help='directory where the dataset is stored')
-parser.add_argument('-train', '--train_mode', type=bool, default=False,
-                    help='decides if model will be trained or only evaluated')
-parser.add_argument('-em', '--existing_model_path', type=str, default='',
-                    help='path to existing model that you wish to load, if empty model will not be loaded')
-parser.add_argument('-sm', '--save_model_path', type=str, default='',
-                    help='path with name of the model that you wish to save, if empty model will not be saved')
-parser.add_argument('--DEBUG', type=bool, default=False,
-                    help='decides if script will run in debug mode (prints to stdout)')
-args = parser.parse_args()
-
-training_dir = {'labels': f'{args.directory}/training/labels',
-                'photos': f'{args.directory}/training/photos'}
-testing_dir = {'labels': f'{args.directory}/testing/labels',
-               'photos': f'{args.directory}/testing/photos'}
-
-dest_dirs = {'training': training_dir, 'testing': testing_dir}
 
 
 def _collate_fn_pad(batch):
@@ -60,18 +41,8 @@ def _collate_fn_pad(batch):
         pad = nn.ZeroPad2d((pad_l, pad_r, pad_t, pad_b))
         padded_imgs[x] = pad(img)
         # padded_imgs[x] = F.pad(img, (pad_l, pad_r, pad_t, pad_b), value=255)  # test of white padding (seems same)
-
     return padded_imgs, torch.stack(labels)
 
-def debug(func):
-    def inner(*arg):
-        if args.DEBUG:
-            func(*arg)
-
-    return inner
-
-
-@debug
 def test_data_loaders(train_loader, test_loader):
     """
     Test function for data_loaders. Prints datasets statistics.
@@ -106,6 +77,25 @@ def test_data_loaders(train_loader, test_loader):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--directory', type=str, default='./dataset/split',
+                        help='directory where the dataset is stored')
+    parser.add_argument('-train', '--train_mode', type=bool, default=False,
+                        help='decides if model will be trained or only evaluated')
+    parser.add_argument('-em', '--existing_model_path', type=str, default='',
+                        help='path to existing model that you wish to load, if empty model will not be loaded')
+    parser.add_argument('-sm', '--save_model_path', type=str, default='',
+                        help='path with name of the model that you wish to save, if empty model will not be saved')
+    args = Common.commonArguments(parser)
+    Common.args = args
+
+    training_dir = {'labels': f'{args.directory}/training/labels',
+                    'photos': f'{args.directory}/training/photos'}
+    testing_dir = {'labels': f'{args.directory}/testing/labels',
+                   'photos': f'{args.directory}/testing/photos'}
+
+    dest_dirs = {'training': training_dir, 'testing': testing_dir}
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
     num_epochs = 16
@@ -126,8 +116,6 @@ if __name__ == "__main__":
                               collate_fn=_collate_fn_pad)
     test_loader = DataLoader(test_data, batch_size=batch_size, sampler=RandomSampler(data_source=test_data),
                              collate_fn=_collate_fn_pad)
-
-    classes = ('empty', 'car')
 
     test_data_loaders(train_loader, test_loader)
 

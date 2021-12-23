@@ -1,13 +1,16 @@
+if __name__ == "__main__":
+    from common import init
+    import argparse
+    init()
+
 import torch
-import argparse
-import sys, os
+import sys
 from torchvision.io import read_image
 from torchvision.io import ImageReadMode
 from torchvision import transforms
 from torch import zeros
-sys.path.append('../NN')
-from NeuralNetwork import NeuralNetwork
-from DatasetCreator import DatasetCreator
+
+from NN.NeuralNetwork import NeuralNetwork
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
@@ -79,13 +82,17 @@ class AppDemo(QWidget):
 
 
 if __name__ == "__main__":
-    classes = ('empty', 'car')
+    parser = argparse.ArgumentParser(
+        description='Visualization of CNN model')
+    parser.add_argument('path_model', type=str, help='Path to model.')
+    args = parser.parse_args()
+
+    # 1. Vytvorit a nacist model NN
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
 
     model = NeuralNetwork(device)
-
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(args.model_path))
     model.eval()
 
     app = QApplication(sys.argv)
