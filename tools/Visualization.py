@@ -1,7 +1,7 @@
 if __name__ == "__main__":
-    from common import init
-    from common import Common
+    from common_tools import init
     init()
+    from common import Common
 
 import torch
 from torch import nn
