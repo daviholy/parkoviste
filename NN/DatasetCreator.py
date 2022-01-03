@@ -16,26 +16,27 @@ class DatasetCreator(Dataset):
         if not path.isdir(Path(dest_labels)):
             exit("Not a valid label directory")
         self.classes = label_dict
-        self.labels = sorted(Path(dest_labels).glob("*.json"))
-        self.transform = transform
-        self.target_transform = target_transform
-        self.photos = dest_photos
+        self.labels = {value: key for key, value in label_dict.items()}
+        self._labels = sorted(Path(dest_labels).glob("*.json"))
+        self._transform = transform
+        self._target_transform = target_transform
+        self._photos = dest_photos
 
-        self.img_label_lst = []
-        for lbl in self.labels:
+        self._img_label_lst = []
+        for lbl in self._labels:
             with open(lbl, 'r') as j:
                 jfile = json.load(j)
-                img = read_image(f'{self.photos}/{jfile["task"]["data"]["image"].split("/")[-1]}', ImageReadMode.RGB)
+                img = read_image(f'{self._photos}/{jfile["task"]["data"]["image"].split("/")[-1]}', ImageReadMode.RGB)
                 label = [] if len(jfile["result"]) == 0 else jfile["result"][0]["value"]["choices"][0]
-                self.img_label_lst.append([label, img])
+                self._img_label_lst.append([label, img])
 
     def __len__(self):
-        return len(self.labels)
+        return len(self._labels)
 
     def __getitem__(self, idx):
-        label, img = self.img_label_lst[idx]
-        if self.transform:
-            img = self.transform(img)
-        if self.target_transform:
-            label = self.target_transform(label)
+        label, img = self._img_label_lst[idx]
+        if self._transform:
+            img = self._transform(img)
+        if self._target_transform:
+            label = self._target_transform(label)
         return img.float(), tensor(self.classes[label])

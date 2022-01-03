@@ -12,22 +12,41 @@ This script connects to given camera source and take a picture. Picture is than
 cut up to pieces (parking places) which are saved separately in jpg format.
 """
 
+class ParkingPlacesRecorder():
 
+    @staticmethod
+    def load_json(file_path):
+        """
+        Loads json file as dictionary.
+        :param file_path: string with path to file
+        :return: dictionary structure with coordinates
+        """
 
+        try:
+            with open(file_path, 'r') as file:
+                return json.load(file)
+        except FileNotFoundError:
+            exit("File " + file_path + " not found")
 
-def load_json(file_path):
-    """
-    Loads json file as dictionary.
-    :param file_path: string with path to file
-    :return: dictionary structure with coordinates
-    """
-
-    try:
-        with open(file_path, 'r') as file:
-            return json.load(file)
-    except FileNotFoundError:
-        exit("File " + file_path + " not found")
-
+    @staticmethod
+    def getplaces(connections: cv2.VideoCapture ,places: dict ):
+        """
+        function which take and cut photos
+        :param connections: (cv2.VideoCapture): connected camera
+        :param places: loaded json dictionary with places coordinates
+        :return: list of cutted parking places
+        """
+        ret, frame = cap.read()
+        pictures = []
+        for place, data in places.items():
+            x1, y1 = data['coordinates'][0]
+            x2, y2 = data['coordinates'][1]
+            if x1 > x2:
+                x1, x2 = x2, x1
+            if y1 > y2:
+                y1, y2 = y2, y1
+            pictures.append((frame[y1:y2, x1:x2]),place)
+        return pictures
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -66,7 +85,7 @@ if __name__ == '__main__':
     cap.release()
 
     # Load parking places locations from json
-    parking_places = load_json(args.parking_places)
+    parking_places = ParkingPlacesRecorder.load_json(args.parking_places)
 
     # Cut parking places and save them separately (in jpg 85% compression).
     i = 0

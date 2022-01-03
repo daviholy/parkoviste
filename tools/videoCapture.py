@@ -21,4 +21,4 @@ if not ret:
     print("No camera return")
 else:
     img_name = args.prefix + datetime.now().strftime("%Y_%b_%d_%H_%M") + ".jpg"
-    cv2.imwrite(args.img_dir + img_name, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+    cv2.imwrite(args.img_dir + "/" + img_name, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
