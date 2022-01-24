@@ -1,25 +1,18 @@
-# import pyyaml module
-import collections
-import yaml
-from multiprocessing import Manager
-from flask import Flask
+"the backround worker for parsing actual information and storing into redis server"
+
+import redis, yaml, json, torch
+import numpy as np
+import datetime
 from yaml.loader import SafeLoader
 from cv2 import VideoCapture, cvtColor, COLOR_BGR2GRAY, IMREAD_COLOR, imdecode
 from torch.utils.data import Dataset
 from torch import nn , zeros, tensor
-import torch
-import json
 from timeit import default_timer
 from time import sleep
-import numpy as np
 from math import floor,ceil
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data import SequentialSampler
-import sys
 from NN.NeuralNetwork import NeuralNetwork
-from multiprocessing.shared_memory import ShareableList
-
-app = Flask(__name__)
 
 def _collate_fn_pad(batch):
      """
@@ -75,18 +68,6 @@ class CameraCollection():
         for adress, coordinates in cameras:
             self.collection.append(Camera(adress,coordinates))
 
-    def example_dictionary(self):
-        """
-        return the example dictionary in which the data will be returned (in three lists first name, second types, third values)
-        """
-        types = []
-        names = []
-        for camera in self.collectionn:
-            cam = camera.example_dictionary()
-            names.extend(cam[0])
-            types.extend(cam[1])
-        return (names, types, [0] * len(names))
-
     def take_photos(self) -> list():
         """
         :return: list of cropped parking places with id
@@ -119,18 +100,6 @@ class Camera():
                 return json.load(file)
         except FileNotFoundError:
             exit("File " + file_path + " not found")
-
-    def  example_dictionary(self):
-        """
-        return the example dictionary in which the data will be returned (in three lists first name, second types, third values)
-        """
-        types = []
-        names = []
-
-        for place, data in self._coordinates.items():
-            names.append(place)
-            types.append(data["type"])
-        return (names, types , [0] * len(names))
         
 
     def take_photo(self) -> tuple:
@@ -145,58 +114,7 @@ class Camera():
                 y1, y2 = y2, y1
             pictures.append(((frame[y1:y2, x1:x2]),place))
         return pictures
-
-
-class ParkingPlace():
-    """
-    holds the dictionary of actual situation of parking place and can it return in json format
-    """
-
-    
-    @classmethod
-    def setdata(data : dict) -> None:
-        """
-        set the dict
-        """
-        ParkingPlace.data = data
-
-    @classmethod
-    @app.route('/')
-    def to_json() -> str:
-        """
-        return data in json if they are set, if not return empty string.
-        :return: json data
-        :rtype: str
-        """
-        # if ParkingPlace.data == None:
-        #     return ""
-        # else:
-        #     return json.dumps(ParkingPlace.data)
-        return json.dumps(dict(parking_place))
-
-    
-
-def active_loop():
-    """
-    the main loop, which will take photos and update the shared memory
-    """
-    while(True):
-        start = default_timer()
-        #taking photo from cameras and feed them into dataloader
-        data.setData(connections.take_photos())
-        results =[]
-        #interfere with model
-        with torch.no_grad():
-            for batch, label in loader:
-                results.extend(model(batch))
-        end = default_timer()
-        if (end - start) >0:
-            sleep(config["interval"])
-
-#global shared data
-keys = []
-types = []
-values = []
+ 
 
 #preloading the config
 config = None
@@ -205,20 +123,43 @@ with open('config.yaml') as f: # parsing config file
         config = yaml.load(f, Loader=SafeLoader)
 
 #loading camera configurations
-#connections = CameraCollection(config["cameras"])
+connections = CameraCollection(config["cameras"])
 
 data = DatasetCreator(grayscale=True)
 loader = DataLoader(data, batch_size=64,collate_fn=_collate_fn_pad, sampler=SequentialSampler(data)) # TODO: read batchsize from cfg
 
 model = NeuralNetwork()
-model.load_state_dict(torch.load("./model/Mymodel.pth", map_location=torch.device('cpu')))#TODO: parsing model form cfg
+#model.load_state_dict(torch.load("./model/Mymodel.pth", map_location=torch.device('cpu')))#TODO: parsing model form cfg
 model.eval()
 
-dict = connections.example_dictionary()
-keys = ShareableList(dict[0])
-types = ShareableList(dict[1])
-values = ShareableList(dict[2])
-active_loop()
+#Creating the redis client connection
+conn = None
+if config.get("socket") == None:
+    if config.get("ip") == None:
+        conn = redis.Redis(host='localhost', port=6379, decode_responses=True)
+    else:
+      conn = redis.Redis(host=config["ip"]["host"], port=config["ip"]["port"], decode_responses=True)
+else:
+    conn = redis.Redis(unix_socket_path=config["socket"])
 
-
-        
+"""
+the main loop, which will take photos and update the redis database
+"""
+while(True):
+    start = default_timer()
+    print(str(datetime.datetime.now()))
+    #taking photo from cameras and feed them into dataloader
+    data.setData(connections.take_photos())
+    results ={'timestamp': str(datetime.datetime.now())}
+    #interfere with model
+    with torch.no_grad():
+        try:
+            for batch, label in loader:
+                results.update(zip(label,model(batch).numpy().argmax(axis=1).tolist()))
+        except StopIteration:
+            pass
+    conn.hset('parking', mapping=results)
+    end = default_timer()
+    if (config["interval"] - (end - start)) >0:
+        sleep(config["interval"] - (end - start))
+    

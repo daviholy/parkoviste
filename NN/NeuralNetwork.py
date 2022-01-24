@@ -70,15 +70,21 @@ class NeuralNetwork(nn.Module):
         super().__init__()
         self.device = device
         self.layer_input = nn.Sequential(nn.AdaptiveMaxPool2d(120))
-        self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(32, 32, 3), nn.BatchNorm2d(32), nn.ReLU(),
+        self.Conv1 = nn.Conv2d(1, 32, 1)
+        self.Conv2 = nn.Conv2d(32, 32, 3)
+        self.norm1 = nn.BatchNorm2d(32)
+        self.relu = nn.LeakyReLU()
+        self.drop = nn.Dropout(p=0.3)
+        self.pool = nn.MaxPool2d(3)
+        self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(32, 32, 3), nn.BatchNorm2d(32), nn.Dropout(p=0.3),nn.LeakyReLU(),
                                     nn.MaxPool2d(3))
-        self.layer2 = nn.Sequential(nn.Conv2d(32, 64, 1), nn.Conv2d(64, 64, 3), nn.BatchNorm2d(64), nn.ReLU(),
+        self.layer2 = nn.Sequential(nn.Conv2d(32, 64, 1), nn.Conv2d(64, 64, 3), nn.BatchNorm2d(64), nn.Dropout(p=0.3), nn.LeakyReLU(),
                                     nn.MaxPool2d(3))
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 128, 1), nn.Conv2d(128, 128, 3), nn.BatchNorm2d(128), nn.ReLU(),
+        self.layer3 = nn.Sequential(nn.Conv2d(64, 128, 1), nn.Conv2d(128, 128, 3), nn.BatchNorm2d(128), nn.Dropout(p=0.3), nn.LeakyReLU(),
                                     nn.MaxPool2d(3))
-        self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.ReLU(), nn.Flatten())
+        self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.Dropout(p=0.3), nn.LeakyReLU(), nn.Flatten())
         self.layer_output = nn.Sequential(
-            nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(), nn.Identity(), nn.BatchNorm1d(2304), nn.ReLU(),  nn.Linear(2304,2))
+            nn.Linear(2304,2304), nn.BatchNorm1d(2304), nn.LeakyReLU(), nn.Linear(2304,2304), nn.BatchNorm1d(2304), nn.LeakyReLU(),  nn.Linear(2304,2))
 
        
     def forward(self, x):
