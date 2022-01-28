@@ -12,6 +12,9 @@ from NN.NeuralNetwork import *
 import matplotlib.pyplot as plt
 
 
+"""In this script NN model is trained."""
+
+
 @Common.debug("model statistics")
 def test_data_loaders(train_loader, test_loader):
     """
