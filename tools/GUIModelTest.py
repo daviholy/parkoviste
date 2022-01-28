@@ -1,6 +1,7 @@
 if __name__ == "__main__":
     from common import init
     import argparse
+
     init()
 
 import torch

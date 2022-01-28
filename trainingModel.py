@@ -9,6 +9,8 @@ import os
 from sys import exit
 from NN.DatasetCreator import *
 from NN.NeuralNetwork import *
+import matplotlib.pyplot as plt
+
 
 @Common.debug("model statistics")
 def test_data_loaders(train_loader, test_loader):
@@ -104,4 +106,4 @@ if __name__ == "__main__":
             torch.save(model.state_dict(), args.save_model_path)
     else:
         model.eval()
-        model.evaluate_model(test_loader, plot= True)
+        model.evaluate_model(test_loader, plot=True)

@@ -1,5 +1,6 @@
 if __name__ == "__main__":
     from common_tools import init
+
     init()
     from common import Common
 
@@ -16,10 +17,11 @@ import argparse
 Script that visualize CNN convolutional layers with given image. Then visualization is saved to jpg file.
 """
 
+
 class Visualization:
 
     @staticmethod
-    def _set_model( device, created_model_path):
+    def _set_model(device, created_model_path):
         """
         Load CNN model and evaluate it.
 
@@ -126,20 +128,21 @@ class Visualization:
         """
         fig = plt.figure(figsize=(30, 50))
         for i in range(len(processed)):
-            a = fig.add_subplot(1, num_of_conv2_layers, i+1)
+            a = fig.add_subplot(1, num_of_conv2_layers, i + 1)
             img_plot = plt.imshow(processed[i])
             a.axis("off")
-            a.set_title(f"K{i+1}", fontsize=30)
+            a.set_title(f"K{i + 1}", fontsize=30)
         plt.savefig(save_path, bbox_inches='tight')
 
     @classmethod
-    def visualize(self,path_to_model,path_to_image, save_path):
+    def visualize(self, path_to_model, path_to_image, save_path):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        model = self._set_model( device, created_model_path=path_to_model)
+        model = self._set_model(device, created_model_path=path_to_model)
         image = self._image_transform(img_path=path_to_image)
         num_of_conv2_layers, conv_layers = self._get_conv2_layers(model)
         processed = self._eval_conv2_layers(conv_layers, image)
         self._save_figure(processed, num_of_conv2_layers, save_path)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

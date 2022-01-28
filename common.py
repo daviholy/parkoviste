@@ -1,15 +1,16 @@
 from torch import zeros, nn, stack
-class Common():
+
+
+class Common:
     args = None
 
     @classmethod
-    def commonArguments(self,parser):
+    def commonArguments(cls, parser):
         parser.add_argument('--DEBUG', type=bool, default=False,
-                        help='decides if script will run in debug mode (prints to stdout)')
-        self.args = parser.parse_args()
-        return self.args
-    
-    
+                            help='decides if script will run in debug mode (prints to stdout)')
+        cls.args = parser.parse_args()
+        return cls.args
+
     @staticmethod
     def _collate_fn_pad(batch):
         """
@@ -24,7 +25,7 @@ class Common():
         h, w = zip(*[list(t[0].size()) for t in imgs])
         max_h, max_w = max(h), max(w)
 
-        padded_imgs = zeros(len(batch),1,max_h,max_w)
+        padded_imgs = zeros(len(batch), 1, max_h, max_w)
         # padding
         for x in range(len(batch)):
             img = batch[x][0]
@@ -40,15 +41,16 @@ class Common():
 
         return padded_imgs, stack(labels)
 
-
     @classmethod
-    def debug(self, name):
+    def debug(cls, name):
         def decorator(func):
             def inner(*arg):
-                if self.args.DEBUG:
+                if cls.args.DEBUG:
                     print(name)
                     func(*arg)
                     print()
                 return
+
             return inner
+
         return decorator
