@@ -5,14 +5,14 @@ class Common:
     args = None
 
     @classmethod
-    def commonArguments(cls, parser):
+    def common_arguments(cls, parser):
         parser.add_argument('--DEBUG', type=bool, default=False,
                             help='decides if script will run in debug mode (prints to stdout)')
         cls.args = parser.parse_args()
         return cls.args
 
     @staticmethod
-    def _collate_fn_pad(batch):
+    def collate_fn_pad(batch):
         """
         Takes images as tensors and labels as input, finds highest and widest size of an image than pad smaller images.
 

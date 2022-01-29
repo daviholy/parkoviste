@@ -18,7 +18,7 @@ if __name__ == "__main__":
                         help='path to existing model that you wish to load, if empty model will not be loaded')
     parser.add_argument('-s', '--save_path', type=str, default='model/export.onnx',
                         help='path to where store the exported model')
-    args = Common.commonArguments(parser)
+    args = Common.common_arguments(parser)
     Common.args = args
 
     # load the pytorch model
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     data = DatasetCreator(labels, f'{args.directory}/testing/photos', f'{args.directory}/testing/labels', transform=trans)
     loader = DataLoader(data, batch_size=batch_size, sampler=RandomSampler(data_source=data),
-                             collate_fn=Common._collate_fn_pad)
+                        collate_fn=Common.collate_fn_pad)
     batch, label=next(iter(loader))
 
     #exporting the model

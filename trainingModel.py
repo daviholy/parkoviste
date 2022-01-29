@@ -1,3 +1,4 @@
+import random
 from common import Common
 import torch
 from torchvision import transforms
@@ -49,6 +50,23 @@ def test_data_loaders(train_loader, test_loader):
     plt.show()
 
 
+class AddGaussianNoise(torch.nn.Module):
+    def __init__(self, mean=0., std=1., p=0.5):
+        super().__init__()
+        self.std = std
+        self.mean = mean
+        self.p = p
+
+    def forward(self, input_tensor):
+        res = input_tensor
+        if random.random() >= self.p:
+            res = input_tensor + torch.randn(input_tensor.size()) * self.std + self.mean
+        return res.type(torch.uint8)
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--directory', type=str, default='./dataset',
@@ -59,7 +77,7 @@ if __name__ == "__main__":
                         help='path to existing model that you wish to load, if empty model will not be loaded')
     parser.add_argument('-sm', '--save_model_path', type=str, default='',
                         help='path with name of the model that you wish to save, if empty model will not be saved')
-    args = Common.commonArguments(parser)
+    args = Common.common_arguments(parser)
     Common.args = args
 
     training_dir = {'labels': f'{args.directory}/training/labels',
@@ -70,24 +88,29 @@ if __name__ == "__main__":
     dest_dirs = {'training': training_dir, 'testing': testing_dir}
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    num_epochs = 2
-    learning_rate = 0.0025
-    batch_size = 96
+    num_epochs = 20
+    learning_rate = 0.0001
+    batch_size = 256
     labels = {"car": 0, "empty": 1}
 
-    trans = nn.Sequential(
-        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+    train_trans = nn.Sequential(
+        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3),
         transforms.RandomHorizontalFlip(p=0.5),
+        transforms.Grayscale(),
+        AddGaussianNoise(mean=0.0, std=0.5, p=0.2),
+        transforms.RandomEqualize(p=1))
+
+    test_trans = nn.Sequential(
         transforms.Grayscale(),
         transforms.RandomEqualize(p=1))
 
-    train_data = DatasetCreator(labels, training_dir['photos'], training_dir['labels'], transform=trans)
-    test_data = DatasetCreator(labels, testing_dir['photos'], testing_dir['labels'], transform=trans)
+    train_data = DatasetCreator(labels, training_dir['photos'], training_dir['labels'], transform=train_trans)
+    test_data = DatasetCreator(labels, testing_dir['photos'], testing_dir['labels'], transform=test_trans)
 
     train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
-                              collate_fn=Common._collate_fn_pad)
+                              collate_fn=Common.collate_fn_pad)
     test_loader = DataLoader(test_data, batch_size=batch_size, sampler=RandomSampler(data_source=test_data),
-                             collate_fn=Common._collate_fn_pad)
+                             collate_fn=Common.collate_fn_pad)
 
     test_data_loaders(train_loader, test_loader)
 
@@ -97,7 +120,7 @@ if __name__ == "__main__":
     if len(args.existing_model_path) > 0:
         if not os.path.isfile(args.existing_model_path):
             exit("invalid path to model you wish to load")
-        model.load_state_dict(torch.load(args.existing_model_path, map_location=torch.device('cpu')))
+        model.load_state_dict(torch.load(args.existing_model_path, map_location=torch.device(device)))
 
     if len(args.save_model_path) > 0:
         if not os.path.isdir('/'.join(os.path.split(args.save_model_path)[:-1])):

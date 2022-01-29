@@ -6,7 +6,6 @@ from torch.utils.data.dataloader import DataLoader
 from NN.ModelStatistics import *
 from math import floor, ceil
 from torch.nn import ConstantPad2d
-import numpy as np
 
 
 class MyAdaptiveAvgPool2d():
@@ -69,12 +68,6 @@ class NeuralNetwork(nn.Module):
         super().__init__()
         self.device = device
         self.layer_input = nn.Sequential(nn.AdaptiveMaxPool2d(120))
-        self.Conv1 = nn.Conv2d(1, 32, 1)
-        self.Conv2 = nn.Conv2d(32, 32, 3)
-        self.norm1 = nn.BatchNorm2d(32)
-        self.relu = nn.LeakyReLU()
-        self.drop = nn.Dropout(p=0.3)
-        self.pool = nn.MaxPool2d(3)
         self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(32, 32, 3), nn.BatchNorm2d(32), nn.Dropout(p=0.3),
                                     nn.LeakyReLU(),
                                     nn.MaxPool2d(3))
@@ -87,8 +80,8 @@ class NeuralNetwork(nn.Module):
         self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.Dropout(p=0.3), nn.LeakyReLU(),
                                     nn.Flatten())
         self.layer_output = nn.Sequential(
-            nn.Linear(2304, 2304), nn.BatchNorm1d(2304), nn.LeakyReLU(), nn.Linear(2304, 2304), nn.BatchNorm1d(2304),
-            nn.LeakyReLU(), nn.Linear(2304, 2))
+            nn.Linear(2304, 2304), nn.BatchNorm1d(2304), nn.LeakyReLU(), nn.Linear(2304, 2304),
+            nn.BatchNorm1d(2304), nn.LeakyReLU(), nn.Linear(2304, 2))
 
     def forward(self, x):
         x = self.layer_input(x)
@@ -120,15 +113,15 @@ class NeuralNetwork(nn.Module):
                 loss.backward()
                 optimizer.step()
 
+                if (i+1) % int(n_total_steps/2) == 0:
+                    print(f"Epoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{n_total_steps}], Loss:{loss.item():.4f}")
+            print()
+
             if (epoch + 1) % 2 == 0 or epoch == num_epochs - 1:
-                print(f"Epoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{n_total_steps}], Loss: {loss.item():.4f}")
-                print()
-                print("Model evaluation on testing data")
-                accuracy_stats["test"], loss_stats["test"] = self.evaluate_model(test_data_loader, 0.1)
-                print()
-                print("Model evaluation on train data")
-                accuracy_stats["train"], loss_stats["train"] = self.evaluate_model(train_data_loader, 0.1)
-                print()
+                print("\nModel evaluation on testing data")
+                accuracy_stats["test"], loss_stats["test"] = self.evaluate_model(test_data_loader)
+                print("\nModel evaluation on train data\n")
+                accuracy_stats["train"], loss_stats["train"] = self.evaluate_model(train_data_loader)
 
         print("Finished Training")
         return accuracy_stats, loss_stats
@@ -157,10 +150,10 @@ class NeuralNetwork(nn.Module):
                 loss += criterion(predicted, labels)
                 predicted = predicted.cpu().numpy()
 
-                for i in range(len(predicted)):
-                    n_class_samples[data_loader.dataset.labels[int(labels[i])]] += 1
-                    if predicted[i].argmax() == labels[i]:
-                        n_class_correct[data_loader.dataset.labels[int(labels[i])]] += 1
+                for i in range(len(labels)):
+                    curr_class = class_names[labels[i]]
+                    n_class_samples[curr_class] += 1
+                    n_class_correct[curr_class] += 1 if predicted[i].argmax() == labels[i] else 0
 
                 all_predictions.extend(predicted)
                 all_labels.extend([class_matrix[i] for i in labels])
@@ -171,10 +164,7 @@ class NeuralNetwork(nn.Module):
             acc = 100.0 * sum(n_class_correct.values()) / len(data_loader.dataset)
             print(f"Accuracy of the net: {acc}%")
 
-            for i in data_loader.dataset.classes:
-                acc = 100.0 * n_class_correct[i] / n_class_samples[i]
-                print(f"Accuracy of {i}: {acc}%")
-
-            print(f'total number of samples: {n_class_samples}')
-            print(f'total number of correct guesses: {n_class_correct}')
+            for i in class_names:
+                class_acc = 100.0 * n_class_correct[i] / n_class_samples[i]
+                print(f"Accuracy of {i}: {class_acc}%, ({n_class_correct[i]}/{n_class_samples[i]})")
             return acc, loss

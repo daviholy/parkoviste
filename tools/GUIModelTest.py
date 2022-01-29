@@ -1,5 +1,5 @@
 if __name__ == "__main__":
-    from common import init
+    from common_tools import init
     import argparse
 
     init()
@@ -72,7 +72,8 @@ class AppDemo(QWidget):
             img = transform(img).float()
             ten = zeros(1, img.shape[0], img.shape[1], img.shape[2])
             ten[0] = img
-            print(self.model(ten))
+            soft = torch.nn.Softmax()
+            print(soft(self.model(ten)))
 
             event.accept()
         else:
@@ -93,7 +94,7 @@ if __name__ == "__main__":
     print(device)
 
     model = NeuralNetwork(device)
-    model.load_state_dict(torch.load(args.model_path))
+    model.load_state_dict(torch.load(args.path_model))
     model.eval()
 
     app = QApplication(sys.argv)

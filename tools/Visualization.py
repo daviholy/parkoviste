@@ -150,6 +150,6 @@ if __name__ == "__main__":
     parser.add_argument('path_to_model', type=str, help='Path to model.')
     parser.add_argument('path_to_image', type=str, help='Path to image that will be visualized')
     parser.add_argument('save_path', type=str, help='Path where will be figure saved')
-    args = Common.commonArguments(parser.parse_args())
+    args = Common.common_arguments(parser.parse_args())
 
     Visualization.visualize(args.path_to_model, args.path_to_image, args.save_path)

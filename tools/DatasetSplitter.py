@@ -131,7 +131,7 @@ if __name__ == '__main__':
                         help='float in range 0-1 that determines ratio of slit between train and test dataset')
     parser.add_argument('-cm', '--copy_mode', type=bool, default=False,
                         help='decides if data will be copied od replaced, copy is slow, replace is faster')
-    args = Common.commonArguments(parser)
+    args = Common.common_arguments(parser)
 
     training_dir = {'labels': f'{args.destination_dir}/training/labels',
                     'photos': f'{args.destination_dir}/training/photos'}
