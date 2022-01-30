@@ -88,9 +88,9 @@ if __name__ == "__main__":
     dest_dirs = {'training': training_dir, 'testing': testing_dir}
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    num_epochs = 20
+    num_epochs = 4
     learning_rate = 0.0001
-    batch_size = 256
+    batch_size = 96
     labels = {"car": 0, "empty": 1}
 
     train_trans = nn.Sequential(
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     if len(args.existing_model_path) > 0:
         if not os.path.isfile(args.existing_model_path):
             exit("invalid path to model you wish to load")
-        model.load_state_dict(torch.load(args.existing_model_path, map_location=torch.device(device)))
+        model.load_state_dict(torch.load(args.existing_model_path))
 
     if len(args.save_model_path) > 0:
         if not os.path.isdir('/'.join(os.path.split(args.save_model_path)[:-1])):
@@ -131,5 +131,5 @@ if __name__ == "__main__":
         if len(args.save_model_path) > 0:
             torch.save(model.state_dict(), args.save_model_path)
     else:
-        model.eval()
+        model.train(True)
         model.evaluate_model(test_loader, plot=True)

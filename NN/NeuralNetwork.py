@@ -1,3 +1,4 @@
+import random
 import numpy as np
 from torch import nn, zeros, tensor, Tensor
 from torch.optim import Adam
@@ -143,6 +144,8 @@ class NeuralNetwork(nn.Module):
             all_predictions = []
             all_labels = []
 
+            s = nn.Sigmoid()
+
             for images, labels in data_loader:
                 images = images.to(self.device)
                 labels = labels.to(self.device)
@@ -154,6 +157,9 @@ class NeuralNetwork(nn.Module):
                     curr_class = class_names[labels[i]]
                     n_class_samples[curr_class] += 1
                     n_class_correct[curr_class] += 1 if predicted[i].argmax() == labels[i] else 0
+
+                    if random.random() >= 0.95:
+                        print(f'predict: {s(tensor(predicted[i]))}, labels: {labels[i]}')
 
                 all_predictions.extend(predicted)
                 all_labels.extend([class_matrix[i] for i in labels])
