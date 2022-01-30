@@ -7,7 +7,9 @@ from torch.utils.data.sampler import RandomSampler
 from torch.utils.data.dataloader import DataLoader
 import argparse
 import os
+import csv
 from sys import exit
+from datetime import datetime
 from NN.DatasetCreator import *
 from NN.NeuralNetwork import *
 import matplotlib.pyplot as plt
@@ -88,7 +90,7 @@ if __name__ == "__main__":
     dest_dirs = {'training': training_dir, 'testing': testing_dir}
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    num_epochs = 4
+    num_epochs = 200
     learning_rate = 0.0001
     batch_size = 96
     labels = {"car": 0, "empty": 1}
@@ -127,9 +129,15 @@ if __name__ == "__main__":
             exit("invalid path to save model")
 
     if args.train_mode:
-        model.train_model(train_loader, test_loader, num_epochs, learning_rate)
+        save_model_path = '/'.join(args.save_model_path.split('/')[:-1])
+        csv_file_name = "model_info.csv"
+        with open(save_model_path + '/' + csv_file_name, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(['epoch_num', 'train_loss', 'test_loss', 'train_auc', 'test_auc', 'train_acc', 'test_acc',
+                             '', f'date_time: {datetime.now().strftime("%d.%m.%Y %H:%M:%S")}'])
+        model.train_model(train_loader, test_loader, num_epochs, learning_rate, save_model_path, csv_file_name)
         if len(args.save_model_path) > 0:
             torch.save(model.state_dict(), args.save_model_path)
     else:
-        model.train(True)
+        model.eval()
         model.evaluate_model(test_loader, plot=True)

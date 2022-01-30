@@ -1,9 +1,11 @@
+import csv
+
 from sklearn.metrics import roc_curve, auc
 import matplotlib.pyplot as plt
 import numpy as np
 
 
-def count_roc_auc(n_classes, output, labels, plot= False):
+def count_roc_auc(n_classes, output, labels, plot=False):
     fpr = dict()
     tpr = dict()
     roc_auc = dict()
@@ -32,3 +34,31 @@ def count_roc_auc(n_classes, output, labels, plot= False):
             plt.show()
 
     return fpr, tpr, roc_auc
+
+
+def draw_loss(csv_file_path):
+
+    train_loss = []
+    test_loss = []
+    epochs = []
+    with open(csv_file_path, 'r') as f:
+        reader = csv.reader(f)
+        header = next(reader)
+        for row in reader:
+            epochs.append(int(row[0]))
+            train_loss.append(float(row[1]))
+            test_loss.append(float(row[2]))
+
+    plt.plot(epochs, train_loss, label="train loss")
+    plt.plot(epochs, test_loss, label="test loss")
+
+    plt.title('Loss during training')
+    plt.xlabel('epochs')
+    plt.ylabel('average loss per batch')
+    plt.legend()
+
+    plt.show()
+
+
+if __name__ == '__main__':
+    draw_loss('../../models/model_002/model_info.csv')

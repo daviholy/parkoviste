@@ -72,8 +72,7 @@ class AppDemo(QWidget):
             img = transform(img).float()
             ten = zeros(1, img.shape[0], img.shape[1], img.shape[2])
             ten[0] = img
-            with torch.no_grad():
-                print(self.model(ten))
+            print(self.model(ten))
 
             event.accept()
         else:
@@ -95,8 +94,7 @@ if __name__ == "__main__":
 
     model = NeuralNetwork(device)
     model.load_state_dict(torch.load(args.path_model))
-    model.train(True)
-    # model.eval()
+    model.eval()
 
     app = QApplication(sys.argv)
     demo = AppDemo(model)

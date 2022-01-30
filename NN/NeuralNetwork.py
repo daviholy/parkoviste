@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import csv
 from torch import nn, zeros, tensor, Tensor
 from torch.optim import Adam
 import torch
@@ -68,17 +69,17 @@ class NeuralNetwork(nn.Module):
     def __init__(self, device="cpu"):
         super().__init__()
         self.device = device
+        self.ret_sigmoid = nn.Sigmoid()
         self.layer_input = nn.Sequential(nn.AdaptiveMaxPool2d(120))
-        self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(32, 32, 3), nn.BatchNorm2d(32), nn.Dropout(p=0.3),
+        self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(32, 32, 3), nn.BatchNorm2d(32),
                                     nn.LeakyReLU(),
                                     nn.MaxPool2d(3))
-        self.layer2 = nn.Sequential(nn.Conv2d(32, 64, 1), nn.Conv2d(64, 64, 3), nn.BatchNorm2d(64), nn.Dropout(p=0.3),
+        self.layer2 = nn.Sequential(nn.Conv2d(32, 64, 1), nn.Conv2d(64, 64, 3), nn.BatchNorm2d(64),
                                     nn.LeakyReLU(),
                                     nn.MaxPool2d(3))
-        self.layer3 = nn.Sequential(nn.Conv2d(64, 128, 1), nn.Conv2d(128, 128, 3), nn.BatchNorm2d(128),
-                                    nn.Dropout(p=0.3), nn.LeakyReLU(),
+        self.layer3 = nn.Sequential(nn.Conv2d(64, 128, 1), nn.Conv2d(128, 128, 3), nn.BatchNorm2d(128), nn.LeakyReLU(),
                                     nn.MaxPool2d(3))
-        self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.Dropout(p=0.3), nn.LeakyReLU(),
+        self.layer4 = nn.Sequential(nn.Conv2d(128, 256, 1), nn.BatchNorm2d(256), nn.LeakyReLU(),
                                     nn.Flatten())
         self.layer_output = nn.Sequential(
             nn.Linear(2304, 2304), nn.BatchNorm1d(2304), nn.LeakyReLU(), nn.Linear(2304, 2304),
@@ -90,20 +91,17 @@ class NeuralNetwork(nn.Module):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        return self.layer_output(x)
+        x = self.layer_output(x) if self.training else self.ret_sigmoid(self.layer_output(x))
+        return x
 
-    def train_model(self, train_data_loader, test_data_loader, num_epochs, learning_rate):
+    def train_model(self, train_data_loader, test_data_loader, num_epochs, learning_rate, model_path, csv_file_name):
 
         criterion = nn.CrossEntropyLoss()
         optimizer = Adam(self.parameters(), lr=learning_rate)
 
-        accuracy_stats = {'train': [],
-                          "test": []}
-
-        loss_stats = {'train': [],
-                      "test": []}
         n_total_steps = len(train_data_loader)
         for epoch in range(num_epochs):
+            self.train(True)
             for i, (images, labels) in enumerate(train_data_loader):
                 images, labels = images.to(self.device), labels.to(self.device)
 
@@ -118,14 +116,22 @@ class NeuralNetwork(nn.Module):
                     print(f"Epoch [{epoch + 1}/{num_epochs}], Step [{i + 1}/{n_total_steps}], Loss:{loss.item():.4f}")
             print()
 
-            if (epoch + 1) % 2 == 0 or epoch == num_epochs - 1:
+            if (epoch + 1) % 10 == 0:
+                torch.save(self.state_dict(), f'{model_path}/epoch_{epoch + 1}.pth')
+            if (epoch + 1) % 5 == 0 or epoch == num_epochs - 1:
+                self.eval()
+                print("\nModel evaluation on train data")
+                tr_loss, tr_acc, tr_auc = self.evaluate_model(train_data_loader)
                 print("\nModel evaluation on testing data")
-                accuracy_stats["test"], loss_stats["test"] = self.evaluate_model(test_data_loader)
-                print("\nModel evaluation on train data\n")
-                accuracy_stats["train"], loss_stats["train"] = self.evaluate_model(train_data_loader)
+                te_loss, te_acc, te_auc = self.evaluate_model(test_data_loader)
+                with open(model_path + "/" + csv_file_name, 'a') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([epoch+1, f'{tr_loss:.4f}', f'{te_loss:.4f}',
+                                     f'car: {tr_auc[0]:.4f}, empty: {tr_auc[1]:.4f}',
+                                     f'car: {te_auc[0]:.4f}, empty: {te_auc[1]:.4f}',
+                                     f'{tr_acc:.4f}', f'{te_acc:.4f}'])
 
         print("Finished Training")
-        return accuracy_stats, loss_stats
 
     def evaluate_model(self, data_loader: DataLoader, plot=False):
         with torch.no_grad():
@@ -144,8 +150,6 @@ class NeuralNetwork(nn.Module):
             all_predictions = []
             all_labels = []
 
-            s = nn.Sigmoid()
-
             for images, labels in data_loader:
                 images = images.to(self.device)
                 labels = labels.to(self.device)
@@ -158,14 +162,12 @@ class NeuralNetwork(nn.Module):
                     n_class_samples[curr_class] += 1
                     n_class_correct[curr_class] += 1 if predicted[i].argmax() == labels[i] else 0
 
-                    if random.random() >= 0.95:
-                        print(f'predict: {s(tensor(predicted[i]))}, labels: {labels[i]}')
-
                 all_predictions.extend(predicted)
                 all_labels.extend([class_matrix[i] for i in labels])
 
             fpr, tpr, roc_auc = count_roc_auc(len(class_names), np.array(all_predictions), np.array(all_labels), plot)
 
+            loss = loss/len(data_loader)
             print(f"Loss of the net: {loss}")
             acc = 100.0 * sum(n_class_correct.values()) / len(data_loader.dataset)
             print(f"Accuracy of the net: {acc}%")
@@ -173,4 +175,4 @@ class NeuralNetwork(nn.Module):
             for i in class_names:
                 class_acc = 100.0 * n_class_correct[i] / n_class_samples[i]
                 print(f"Accuracy of {i}: {class_acc}%, ({n_class_correct[i]}/{n_class_samples[i]})")
-            return acc, loss
+            return loss, acc, roc_auc
