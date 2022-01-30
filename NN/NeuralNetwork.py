@@ -118,7 +118,7 @@ class NeuralNetwork(nn.Module):
 
             if (epoch + 1) % 10 == 0:
                 torch.save(self.state_dict(), f'{model_path}/epoch_{epoch + 1}.pth')
-            if (epoch + 1) % 5 == 0 or epoch == num_epochs - 1:
+            if (epoch + 1) % 5 == 0 or epoch == num_epochs - 1 or epoch == 0:
                 self.eval()
                 print("\nModel evaluation on train data")
                 tr_loss, tr_acc, tr_auc = self.evaluate_model(train_data_loader)
@@ -126,10 +126,10 @@ class NeuralNetwork(nn.Module):
                 te_loss, te_acc, te_auc = self.evaluate_model(test_data_loader)
                 with open(model_path + "/" + csv_file_name, 'a') as f:
                     writer = csv.writer(f)
-                    writer.writerow([epoch+1, f'{tr_loss:.4f}', f'{te_loss:.4f}',
-                                     f'car: {tr_auc[0]:.4f}, empty: {tr_auc[1]:.4f}',
-                                     f'car: {te_auc[0]:.4f}, empty: {te_auc[1]:.4f}',
-                                     f'{tr_acc:.4f}', f'{te_acc:.4f}'])
+                    writer.writerow([epoch+1, f'{tr_loss:.7f}', f'{te_loss:.7f}',
+                                     f'car: {tr_auc[0]:.7f}, empty: {tr_auc[1]:.7f}',
+                                     f'car: {te_auc[0]:.7f}, empty: {te_auc[1]:.7f}',
+                                     f'{tr_acc:.7f}', f'{te_acc:.7f}'])
 
         print("Finished Training")
 

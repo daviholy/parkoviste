@@ -91,8 +91,8 @@ if __name__ == "__main__":
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     num_epochs = 200
-    learning_rate = 0.0001
-    batch_size = 96
+    learning_rate = 0.0005
+    batch_size = 128
     labels = {"car": 0, "empty": 1}
 
     train_trans = nn.Sequential(
