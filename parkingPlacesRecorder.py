@@ -12,6 +12,7 @@ This script connects to given camera source and take a picture. Picture is than
 cut up to pieces (parking places) which are saved separately in jpg format.
 """
 
+
 class ParkingPlacesRecorder():
 
     @staticmethod
@@ -47,6 +48,7 @@ class ParkingPlacesRecorder():
                 y1, y2 = y2, y1
             pictures.append((frame[y1:y2, x1:x2]),place)
         return pictures
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

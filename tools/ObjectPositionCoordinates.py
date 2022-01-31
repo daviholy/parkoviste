@@ -186,14 +186,23 @@ def view(image, path):
     :param path: Path to json file
     """
     data_json = read_json(path)
+    # TODO: file name parameter, check if file exists
+    predicted_json = read_json('../../dataset/predicted_31_01_12_33.json')
     type_ar = []
     coor_ar = []
+    counter = 0
+    car_count = 0
 
     if data_json:
         for i in data_json:
             type_ar.append(data_json[i]["type"])
             coor_ar.append(data_json[i]["coordinates"])
         for typ, coor in zip(type_ar, coor_ar):
+            pos = coor[0] if counter < 32 else [coor[0][0], coor[1][1]+19]
+            car_count += 1 if predicted_json[f"position-{counter}"] == "1" else 0
+            cv2.putText(img=image, text=f'{counter}:{predicted_json[f"position-{counter}"]}', org=pos,
+                        fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=(0, 0, 0), thickness=2)
+            counter += 1
             if typ == "standard":
                 cv2.rectangle(image, coor[0], coor[1], (0, 255, 0))
             elif typ == "non-standard":
@@ -209,7 +218,7 @@ def view(image, path):
             0.5,  # font size
             (0, 150, 255, 255),  # font color
             1)  # font stroke
-
+        print(f"Number of cars: {car_count}")
         cv2.imshow("Window", image)
         cv2.waitKey(0)
     else:
