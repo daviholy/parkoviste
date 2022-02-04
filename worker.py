@@ -1,10 +1,11 @@
 "the backround worker for parsing actual information and storing into redis server"
 
 import redis, yaml, json, torch
-import numpy as np
 import datetime
+import argparse
+from common import Common
 from yaml.loader import SafeLoader
-from cv2 import VideoCapture, cvtColor, COLOR_BGR2GRAY, IMREAD_COLOR, imdecode
+from cv2 import VideoCapture, cvtColor, COLOR_BGR2GRAY, equalizeHist, putText, FONT_HERSHEY_DUPLEX, rectangle, imwrite, IMWRITE_JPEG_QUALITY
 from torch.utils.data import Dataset
 from torch import nn, zeros, tensor
 from timeit import default_timer
@@ -42,52 +43,64 @@ def _collate_fn_pad(batch):
 
 
 class DatasetCreator(Dataset):
-    def __init__(self, data: list = None, grayscale=False) -> None:
+    def __init__(self, data: list = None, labels: list = None, grayscale=False) -> None:
         self._transform = grayscale
         self._data = data
+        self._labels = labels
 
     def __len__(self):
         return len(self._data)
 
     def __getitem__(self, idx):
         if self._transform:
-            return tensor(cvtColor(self._data[idx][0], COLOR_BGR2GRAY)), self._data[idx][1]
+            img = cvtColor(self._data[idx], COLOR_BGR2GRAY)
+            img = equalizeHist(img)
+            return tensor(img).unsqueeze(0), self._labels[idx]
         else:
-            return tensor(self._data[idx][0]), self._data[idx][1]
+            return tensor(self._data[idx]), self._labels[idx]
 
-    def setData(self, data: list) -> None:
+    def setData(self, data: list, labels: list) -> None:
         self._data = data
+        self._labels = labels
 
 
-class CameraCollection():
+class CameraCollection:
     """
     utility class which holds all the cameras and aggregate functions which operates on all cameras in collection
     """
 
     def __init__(self, cameras: list):
         self.collection = []
-        for adress, coordinates in cameras:
-            self.collection.append(Camera(adress, coordinates))
+        for i in range(len(cameras)):
+            self.collection.append((Camera(i, cameras[i][0], cameras[i][1])))
 
-    def take_photos(self) -> list():
+    def take_photos(self) -> tuple:
         """
         :return: list of cropped parking places with id
         :rtype: list
         """
         photos = []
+        labels = []
+        whole_photos = []
+
         for camera in self.collection:
-            photos.extend(camera.take_photo())
-        return photos
+            ret, photo = camera.take_photo()
+            photo_samples, label_cur = camera.cut_photo_samples(photo)
+            photos.extend(photo_samples)
+            labels.extend(label_cur)
+            whole_photos.append(photo)
+        return photos, labels, whole_photos
 
 
-class Camera():
+class Camera:
     """
     class which represents connected camera with it's coordinates of places
     """
 
-    def __init__(self, adress: str, coordinates: str):
-        self._connection = VideoCapture(adress)
-        self._coordinates = self._load_json(coordinates)
+    def __init__(self, index, address: str, coordinates: str):
+        self.coordinates = self._load_json(coordinates)
+        self.index = index
+        self._connection = VideoCapture(address)
 
     @staticmethod
     def _load_json(file_path):
@@ -105,17 +118,59 @@ class Camera():
 
     def take_photo(self) -> tuple:
         ret, frame = self._connection.read()  # TODO: implement logging if the connection failed
+        return ret, frame
+
+    def cut_photo_samples(self, photo) -> tuple:
         pictures = []
-        for place, data in self._coordinates.items():
+        labels = []
+        for place, data in self.coordinates.items():
             x1, y1 = data['coordinates'][0]
             x2, y2 = data['coordinates'][1]
             if x1 > x2:
                 x1, x2 = x2, x1
             if y1 > y2:
                 y1, y2 = y2, y1
-            pictures.append(((frame[y1:y2, x1:x2]), place))
-        return pictures
+            pictures.append(photo[y1:y2, x1:x2])
+            labels.append(f"{place}-{self.index}")
+        return pictures, labels
 
+
+@Common.debug("model statistics")
+def save_prediction_img(img, prediction, cameras, save_path):
+    counter = 0
+    car_count = 0
+
+    for camera in cameras:
+        for place, data in camera.coordinates.items():
+            place_type = data["type"]
+            coor = data["coordinates"]
+
+            pos = coor[0] if counter < 32 else [coor[0][0], coor[1][1] + 19]
+            car_count += int(prediction[counter])
+
+            putText(img=img[camera.index], text=f'{counter}:{prediction[counter]}', org=pos,
+                    fontFace=FONT_HERSHEY_DUPLEX, fontScale=0.8, color=(0, 0, 0), thickness=2)
+            counter += 1
+
+            # BGR
+            rect_color = (0, 255, 0)  # standard - green
+            if place_type == "disabled":
+                rect_color = (255, 0, 0)  # blue
+            elif place_type == "non-standard":
+                rect_color = (0, 0, 255)  # red
+
+            rectangle(img[camera.index], coor[0], coor[1], rect_color)
+
+        file_name = f'{datetime.datetime.now().strftime("%Y_%b_%d_%H_%M")}_cam{camera.index}.jpg'
+
+        imwrite(save_path + '/' + file_name, img[camera.index], [int(IMWRITE_JPEG_QUALITY), 85])
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-pth', '--save_path', type=str, default='./dataset',
+                    help='directory where the whole photo of parking place with prediction will be saved')
+args = Common.common_arguments(parser)
+Common.args = args
 
 # preloading the config
 config = None
@@ -127,17 +182,17 @@ with open('config.yaml') as f:  # parsing config file
 connections = CameraCollection(config["cameras"])
 
 data = DatasetCreator(grayscale=True)
-loader = DataLoader(data, batch_size=64, collate_fn=_collate_fn_pad,
-                    sampler=SequentialSampler(data))  # TODO: read batchsize from cfg
+loader = DataLoader(data, batch_size=1, sampler=SequentialSampler(data))  # TODO: read batchsize from cfg
 
 model = NeuralNetwork()
-# model.load_state_dict(torch.load("./model/Mymodel.pth", map_location=torch.device('cpu')))#TODO: parsing model form cfg
+model.load_state_dict(
+    torch.load("./model/model_car-1_empty-0.pth", map_location=torch.device('cpu')))  # TODO: parsing model form cfg
 model.eval()
 
 # Creating the redis client connection
 conn = None
-if config.get("socket") == None:
-    if config.get("ip") == None:
+if config.get("socket") is None:
+    if config.get("ip") is None:
         conn = redis.Redis(host='localhost', port=6379, decode_responses=True)
     else:
         conn = redis.Redis(host=config["ip"]["host"], port=config["ip"]["port"], decode_responses=True)
@@ -151,16 +206,23 @@ while True:
     start = default_timer()
     print(str(datetime.datetime.now()))
     # taking photo from cameras and feed them into dataloader
-    data.setData(connections.take_photos())
+    photos, labels, whole_photos = connections.take_photos()
+    predictions = []
+    data.setData(photos, labels)
     results = {'timestamp': str(datetime.datetime.now())}
     # interfere with model
     with torch.no_grad():
         try:
             for batch, label in loader:
-                results.update(zip(label, model(batch).numpy().argmax(axis=1).tolist()))
+                pred = model(batch.float()).numpy().argmax(axis=1).tolist()
+                results.update(zip(label, pred))
+                predictions.extend(pred)
         except StopIteration:
             pass
     conn.hset('parking', mapping=results)
+
+    save_prediction_img(whole_photos, predictions, connections.collection, args.save_path)
+
     end = default_timer()
     if (config["interval"] - (end - start)) > 0:
         sleep(config["interval"] - (end - start))

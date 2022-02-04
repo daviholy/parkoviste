@@ -62,4 +62,4 @@ def draw_loss(csv_file_path):
 
 if __name__ == '__main__':
     # TODO: filename as parameter
-    draw_loss('../../models/model_003/model_info.csv')
+    draw_loss('../../models/model_006/model_info.csv')

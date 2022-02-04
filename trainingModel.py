@@ -91,23 +91,19 @@ if __name__ == "__main__":
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     num_epochs = 200
-    learning_rate = 0.0005
-    batch_size = 128
-    labels = {"car": 0, "empty": 1}
+    learning_rate = 0.00001
+    batch_size = 32
+    labels = {"empty": 0, "car": 1}
 
     train_trans = nn.Sequential(
-        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3),
+        transforms.ColorJitter(hue=0.3, saturation=0.3),
         transforms.RandomHorizontalFlip(p=0.5),
-        transforms.Grayscale(),
         AddGaussianNoise(mean=0.0, std=0.5, p=0.2),
-        transforms.RandomEqualize(p=1))
-
-    test_trans = nn.Sequential(
-        transforms.Grayscale(),
-        transforms.RandomEqualize(p=1))
+        transforms.RandomErasing(p=0.2, scale=(0.08, 0.08), ratio=(1, 2))
+    )
 
     train_data = DatasetCreator(labels, training_dir['photos'], training_dir['labels'], transform=train_trans)
-    test_data = DatasetCreator(labels, testing_dir['photos'], testing_dir['labels'], transform=test_trans)
+    test_data = DatasetCreator(labels, testing_dir['photos'], testing_dir['labels'])
 
     train_loader = DataLoader(train_data, batch_size=batch_size, sampler=RandomSampler(data_source=train_data),
                               collate_fn=Common.collate_fn_pad)

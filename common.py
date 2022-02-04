@@ -22,6 +22,7 @@ class Common:
         """
         imgs, labels = zip(*batch)
         # get max width and height
+
         h, w = zip(*[list(t[0].size()) for t in imgs])
         max_h, max_w = max(h), max(w)
 

@@ -6,6 +6,7 @@ from torch import tensor
 from os import path
 import os
 import json
+import cv2
 
 
 class DatasetCreator(Dataset):
@@ -26,9 +27,10 @@ class DatasetCreator(Dataset):
         for lbl in self._labels:
             with open(lbl, 'r') as j:
                 jfile = json.load(j)
-                img = read_image(f'{self._photos}/{jfile["task"]["data"]["image"].split("/")[-1]}', ImageReadMode.RGB)
+                img = cv2.imread(f'{self._photos}/{jfile["task"]["data"]["image"].split("/")[-1]}', 0)
+                img = cv2.equalizeHist(img)
                 label = [] if len(jfile["result"]) == 0 else jfile["result"][0]["value"]["choices"][0]
-                self._img_label_lst.append([label, img])
+                self._img_label_lst.append([label, tensor(img).unsqueeze(0)])
 
     def __len__(self):
         return len(self._labels)
