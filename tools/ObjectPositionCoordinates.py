@@ -8,14 +8,6 @@ non-standard - blue, and disabled - red. If user press escape, rectangle coordin
 are saved into json file.
 Rectangles can be loaded from json file to be showed on the picture.
 """
-parser = argparse.ArgumentParser(
-    description='Object position coordination from rectangles in image')
-parser.add_argument('imagePath', type=str, help='Path to image.')
-parser.add_argument('-j', '--json', type=str,
-                    default="parkingPlaces.json", help='Path to the json file')
-parser.add_argument('--view', type=bool, default=False,
-                    help='Viewer mod for rectangles in picture imported from Json.'
-                         ' False - default value | True - rectangle viewer')
 
 drawing = False
 point1 = ()
@@ -210,14 +202,7 @@ def view(image, path):
             elif typ == "disabled":
                 cv2.rectangle(image, coor[0], coor[1], (0, 0, 255))
 
-        cv2.putText(
-            image,  # numpy array on which text is written
-            "View",  # text
-            (10, 15),  # position at which writing has to start
-            cv2.FONT_HERSHEY_DUPLEX,  # font family
-            0.5,  # font size
-            (0, 150, 255, 255),  # font color
-            1)  # font stroke
+        cv2.putText(image, "View", (10, 15), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 150, 255, 255), 1)
         print(f"Number of cars: {car_count}")
         cv2.imshow("Window", image)
         cv2.waitKey(0)
@@ -226,6 +211,14 @@ def view(image, path):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+    description='Object position coordination from rectangles in image')
+    parser.add_argument('imagePath', type=str, help='Path to image.')
+    parser.add_argument('-j', '--json', type=str,
+                        default="parkingPlaces.json", help='Path to the json file')
+    parser.add_argument('--view', type=bool, default=False,
+                        help='Viewer mod for rectangles in picture imported from Json.'
+                            ' False - default value | True - rectangle viewer')
     args = parser.parse_args()
 
     cv2.namedWindow("Window")
