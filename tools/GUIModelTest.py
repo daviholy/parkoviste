@@ -10,6 +10,7 @@ from torchvision.io import read_image
 from torchvision.io import ImageReadMode
 from torchvision import transforms
 from torch import zeros
+import cv2
 
 from NN.NeuralNetwork import NeuralNetwork
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout
@@ -66,10 +67,9 @@ class AppDemo(QWidget):
             event.setDropAction(Qt.CopyAction)
             file_path = event.mimeData().urls()[0].toLocalFile()
             self.set_image(file_path)
-
-            img = read_image(file_path, ImageReadMode.RGB)
-            transform = torch.nn.Sequential(transforms.Grayscale(), transforms.RandomEqualize(p=1))
-            img = transform(img).float()
+            img = cv2.imread(file_path, 0)
+            img = cv2.equalizeHist(img)
+            img = torch.tensor(img).unsqueeze(0)
             ten = zeros(1, img.shape[0], img.shape[1], img.shape[2])
             ten[0] = img
             print(self.model(ten))
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     print(device)
 
     model = NeuralNetwork(device)
-    model.load_state_dict(torch.load(args.path_model))
+    model.load_state_dict(torch.load(args.path_model, map_location=device))
     model.eval()
 
     app = QApplication(sys.argv)

@@ -69,7 +69,7 @@ class NeuralNetwork(nn.Module):
     def __init__(self, device="cpu"):
         super().__init__()
         self.device = device
-        self.ret_sigmoid = nn.Sigmoid()
+        self.ret_softmax = nn.Softmax(dim=1)
         self.layer_input = nn.Sequential(nn.AdaptiveMaxPool2d(120))
         self.layer1 = nn.Sequential(nn.Conv2d(1, 32, 1), nn.Conv2d(32, 32, 3), nn.BatchNorm2d(32),
                                     nn.LeakyReLU(),
@@ -91,7 +91,7 @@ class NeuralNetwork(nn.Module):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        x = self.layer_output(x) if self.training else self.ret_sigmoid(self.layer_output(x))
+        x = self.layer_output(x) if self.training else self.ret_softmax(self.layer_output(x))
         return x
 
     def train_model(self, train_data_loader, test_data_loader, num_epochs, learning_rate, model_path, csv_file_name):
