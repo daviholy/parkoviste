@@ -13,6 +13,8 @@ Rectangles can be loaded from json file to be showed on the picture.
 
 drawing = False
 is_edited = False
+is_adding = False
+add_index = -1
 point1 = ()
 point2 = ()
 mouse_position = ()
@@ -29,7 +31,7 @@ def mouse_drawing(event, x, y, flags, params):
     :param flags:
     :param params:
     """
-    global point1, point2, drawing, ar, type_p, mouse_position, is_edited, index
+    global point1, point2, drawing, ar, type_p, mouse_position, is_edited, index, is_adding, add_index
 
     if event == cv2.EVENT_LBUTTONDOWN:
         if not drawing:
@@ -53,7 +55,10 @@ def mouse_drawing(event, x, y, flags, params):
             if is_edited:
                 ar[index] = ([point1, point2, type_p])
                 is_edited = False
-            else:
+            if is_adding:
+                ar.insert(add_index, [point1, point2, type_p])
+                is_adding = False
+            if not is_edited and not is_adding:
                 ar.append([point1, point2, type_p])
 
             point1 = ()
@@ -116,7 +121,7 @@ def rectangle_opencv(image, path, edit):
     :param image: OpenCV image
     :param path: Path to json file
     """
-    global type_p, is_edited, index
+    global type_p, is_edited, index, add_index, is_adding
     color_arr = [(0, 255, 0), (255, 0, 0), (0, 0, 255), (186, 21, 228)]
     color = color_arr[0]  # Default value
     image_copy = image.copy()
@@ -149,7 +154,6 @@ def rectangle_opencv(image, path, edit):
     while True:
         image_copy = image.copy()
 
-
         if point1 and point2:
             cv2.rectangle(image_copy, point1, point2, color)
 
@@ -180,7 +184,7 @@ def rectangle_opencv(image, path, edit):
             type_p = "disabled"
             color = color_arr[2]
 
-        if key == 8:  # 8 key code for backspace
+        if key == 8:  # 8 key code for backspace, edit mode
             if ar and not is_edited:
                 index = 0
                 for rect in ar:
@@ -189,6 +193,12 @@ def rectangle_opencv(image, path, edit):
                         is_edited = True
                         break
                     index += 1
+
+        if key == 97 and not is_adding:  # 97 key code for a, adding mode
+            is_adding = True
+            print('Write index of added rectangle')
+            add_index = int(input())
+            print(f'Index was: {add_index}')
 
         if key == 122:  # 122 key code for z
             if ar:
@@ -211,6 +221,7 @@ def rectangle_opencv(image, path, edit):
         cv2.imshow("Window", image_copy)
 
     cv2.destroyAllWindows()
+
 
 def view(image, path_json_positions, path_json_predictions, car_line):
     """
