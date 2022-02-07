@@ -55,10 +55,10 @@ def mouse_drawing(event, x, y, flags, params):
             if is_edited:
                 ar[index] = ([point1, point2, type_p])
                 is_edited = False
-            if is_adding:
+            elif is_adding:
                 ar.insert(add_index, [point1, point2, type_p])
                 is_adding = False
-            if not is_edited and not is_adding:
+            else:
                 ar.append([point1, point2, type_p])
 
             point1 = ()
@@ -161,6 +161,7 @@ def rectangle_opencv(image, path, edit):
             if is_edited:
                 cv2.rectangle(image_copy, ar[index][0], ar[index][1], color_arr[3])
             for i in range(len(ar)):
+                cv2.putText(img=image_copy, text=str(i), org=ar[i][0], fontFace=cv2.FONT_HERSHEY_DUPLEX, fontScale=0.8, color=(0, 0, 0), thickness=2)
                 if i == index and is_edited:
                     continue
                 elif ar[i][2] == "standard":
