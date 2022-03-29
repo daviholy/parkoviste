@@ -1,13 +1,15 @@
-interval: 20
-
-model: "model/model_b64_e25.pth"
-
+interval: 1800
+model: "./model/model_car-1_empty-0.pth"
+device: "cpu"
+batch_size: 1
+save:
+  enabled: True
+  predicted_path: "./dataset/prediction"
+  clean_img_path: "./dataset/img"
 cameras:
-  - ["rtsp://cam1:C7XRQPDKbF4JGNRp@192.168.30.147:554/s0", "parkingPlaces.json"]
+  - ["rtsp://cam1:C7XRQPDKbF4JGNRp@192.168.30.146:554/s0", "parkingPlaces.json"]
   - ["rtsp://cam2:C7XRQPDKbF4JGNRp@192.168.30.165:554/s0", "parkingPlaces2.json"]
 
-socket: "testsocket.soc"
-
 ip:
-  host: local
-  port: 6359
+  host: localhost
+  port: 6379

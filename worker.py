@@ -135,10 +135,14 @@ class Camera:
         return pictures, labels
 
 
-@Common.debug("model statistics")
-def save_prediction_img(img, prediction, cameras, save_path):
+def save_prediction_img(img, prediction, cameras, save_prediction_path,save_img_path):
     counter = 0
     car_count = 0
+    suffix = ".jpg"
+    file_name = f'{datetime.datetime.now().strftime("%Y_%b_%d_%H_%M")}_cam'
+
+    for i in range(len(img)):
+        imwrite(save_img_path + '/' + file_name + str(i) + suffix , img[i], [int(IMWRITE_JPEG_QUALITY), 85])
 
     for camera in cameras:
         for place, data in camera.coordinates.items():
@@ -161,9 +165,9 @@ def save_prediction_img(img, prediction, cameras, save_path):
 
             rectangle(img[camera.index], coor[0], coor[1], rect_color)
 
-        file_name = f'{datetime.datetime.now().strftime("%Y_%b_%d_%H_%M")}_cam{camera.index}.jpg'
 
-        imwrite(save_path + '/' + file_name, img[camera.index], [int(IMWRITE_JPEG_QUALITY), 85])
+            imwrite(save_prediction_path + '/' + file_name + str(camera.index) + suffix, img[camera.index], [int(IMWRITE_JPEG_QUALITY), 85])
+        
 
 
 parser = argparse.ArgumentParser()
@@ -182,11 +186,11 @@ with open('config.yaml') as f:  # parsing config file
 connections = CameraCollection(config["cameras"])
 
 data = DatasetCreator(grayscale=True)
-loader = DataLoader(data, batch_size=1, sampler=SequentialSampler(data))  # TODO: read batchsize from cfg
+loader = DataLoader(data, batch_size=config["batch_size"], sampler=SequentialSampler(data))
 
 model = NeuralNetwork()
 model.load_state_dict(
-    torch.load("./model/model_car-1_empty-0.pth", map_location=torch.device('cpu')))  # TODO: parsing model form cfg
+    torch.load(config["model"], map_location=torch.device(config["device"])))
 model.eval()
 
 # Creating the redis client connection
@@ -221,7 +225,8 @@ while True:
             pass
     conn.hset('parking', mapping=results)
 
-    save_prediction_img(whole_photos, predictions, connections.collection, args.save_path)
+    if config["save"]["enabled"]:
+        save_prediction_img(whole_photos, predictions, connections.collection, config["save"]["predicted_path"], config["save"]["clean_img_path"])
 
     end = default_timer()
     if (config["interval"] - (end - start)) > 0:
