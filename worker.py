@@ -99,8 +99,13 @@ class Camera:
 
     def __init__(self, index, address: str, coordinates: str):
         self.coordinates = self._load_json(coordinates)
+        self._address = address
         self.index = index
         self._connection = VideoCapture(address)
+
+    def reconnect(self):
+        self._connection.release()
+        self._connection= VideoCapture(self._address)
 
     @staticmethod
     def _load_json(file_path):
@@ -117,6 +122,7 @@ class Camera:
             exit("File " + file_path + " not found")
 
     def take_photo(self) -> tuple:
+        self.reconnect()
         ret, frame = self._connection.read()  # TODO: implement logging if the connection failed
         return ret, frame
 
